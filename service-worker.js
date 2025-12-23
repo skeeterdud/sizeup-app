@@ -1,23 +1,21 @@
-const CACHE_NAME = "sizeup-cache-v1";
+const CACHE_NAME = "sizeup-v1";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./service-worker.js",
+  "./logo.png",
   "./icon-192.png",
   "./icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)))
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
 });
