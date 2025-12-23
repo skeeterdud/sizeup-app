@@ -194,13 +194,11 @@
 
     // Render groups in order with a divider before IAP
     CONFIG.forEach(group => {
-      if (group.key === "iapTasks") {
-        const hr = document.createElement("hr");
-        controlsEl.appendChild(hr);
-        const title = document.createElement("div");
-        title.className = "group-title";
-        title.innerHTML = `<b>Initial Action Plan</b>`;
-        controlsEl.appendChild(title);
+     const SECTION_BREAKS = [
+  { atKey: "buildingSize", title: "Building / Area Description" },
+  { atKey: "conditions", title: "Problem Description" },
+  { atKey: "iapTasks", title: "Initial Action Plan" },
+  { atKey: "strategy", title: "Strategy / Command" }
       }
 
       const wrap = document.createElement("div");
@@ -248,7 +246,16 @@
 
     refreshSelectedUI();
   }
+const sec = SECTION_BREAKS.find(s => s.atKey === group.key);
+if (sec) {
+  const hr = document.createElement("hr");
+  controlsEl.appendChild(hr);
 
+  const title = document.createElement("div");
+  title.className = "group-title";
+  title.innerHTML = `<b>${sec.title}</b>`;
+  controlsEl.appendChild(title);
+}
   function onChoice(group, value) {
     if (group.mode === "single") {
       state[group.key] = value;
@@ -319,7 +326,16 @@
     // Conditions sentence
     const cond = singlePhrase("conditions");
     if (cond) text += `\n\n${cond}`;
+const sec = SECTION_BREAKS.find(s => s.atKey === group.key);
+if (sec) {
+  const hr = document.createElement("hr");
+  controlsEl.appendChild(hr);
 
+  const title = document.createElement("div");
+  title.className = "group-title";
+  title.innerHTML = `<b>${sec.title}</b>`;
+  controlsEl.appendChild(title);
+}
     // Location of the problem: multi sides + free text
     const sides = multiList("problemSides");
     const sidesText = sides.length ? sides.join("/") : "";
@@ -327,7 +343,16 @@
     if (sidesText || locFree) {
       text += ` Location of the problem: ${[sidesText, locFree].filter(Boolean).join(" – ")}.`;
     }
+const sec = SECTION_BREAKS.find(s => s.atKey === group.key);
+if (sec) {
+  const hr = document.createElement("hr");
+  controlsEl.appendChild(hr);
 
+  const title = document.createElement("div");
+  title.className = "group-title";
+  title.innerHTML = `<b>${sec.title}</b>`;
+  controlsEl.appendChild(title);
+}
     // IAP
     const tasks = multiList("Tasks").map(v => optionPhrase("iapTasks", v)).filter(Boolean);
     const iapLoc = singlePhrase("Location");
@@ -339,6 +364,16 @@
       if (iapLoc) text += ` Location: ${iapLoc}.`;
       if (objectives.length) text += ` Objectives: ${objectives.join(", ")}.`;
     }
+const sec = SECTION_BREAKS.find(s => s.atKey === group.key);
+if (sec) {
+  const hr = document.createElement("hr");
+  controlsEl.appendChild(hr);
+
+  const title = document.createElement("div");
+  title.className = "group-title";
+  title.innerHTML = `<b>${sec.title}</b>`;
+  controlsEl.appendChild(title);
+}
 
     // Strategy
     const strat = singlePhrase("strategy");
