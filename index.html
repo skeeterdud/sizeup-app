@@ -725,10 +725,12 @@
       btn.dataset.value = v;
       btn.textContent = v;
       btn.addEventListener("click", () => {
-      fstate.confirmStrategy = opt.value;
-      refreshSelectedUI();
-      updateOutputs();
-    });
+      btn.addEventListener("click", () => {
+      state.strategy = v;
+        refreshSelectedUI();
+        updateOutputs();
+      });
+
 
       stratGrid.appendChild(btn);
     });
