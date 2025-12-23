@@ -390,15 +390,22 @@
   const followOutputBox = document.getElementById("followOutputBox");
 
   function init(){
-    renderControls();
-    updateOutputs();
+  renderControls();
+  updateOutputs();
 
-    document.("copyBtn").addEventListener("click", () => copyFrom(outputBox, "Copied size-up!"));
-    document.("clearSizeupBtn").addEventListener("click", clearSizeup);
+  const copyBtn = document.getElementById("copyBtn");
+  if (copyBtn) copyBtn.addEventListener("click", () => copyFrom(outputBox, "Copied size-up!"));
 
-    document.("copyFollowBtn").addEventListener("click", () => copyFrom(followOutputBox, "Copied follow-up!"));
-    document.("clearFollowBtn").addEventListener("click", clearFollow);
-  }
+  const clearSizeupBtn = document.getElementById("clearSizeupBtn");
+  if (clearSizeupBtn) clearSizeupBtn.addEventListener("click", clearSizeup);
+
+  const copyFollowBtn = document.getElementById("copyFollowBtn");
+  if (copyFollowBtn) copyFollowBtn.addEventListener("click", () => copyFrom(followOutputBox, "Copied follow-up!"));
+
+  const clearFollowBtn = document.getElementById("clearFollowBtn");
+  if (clearFollowBtn) clearFollowBtn.addEventListener("click", clearFollow);
+}
+
 
   function onChoice(group, value){
     if (group.mode === "single") state[group.key] = value;
@@ -725,7 +732,6 @@
     });
     cmd.appendChild(stratGrid);
 
-    const cmdLabel = document.createElement("div");
     const cmdLabel = document.createElement("div");
     cmdLabel.className = "boldLabel";
     cmdLabel.style.margin = "12px 0 10px 0";
