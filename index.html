@@ -869,9 +869,16 @@
   
     
     // add follow-up controls once per render
-renderFollowBlock(controlsEl);
+    // after you append the Strategy/Command row
+    controlsEl.appendChild(row);
 
-refreshSelectedUI();
+    // NOW render follow-up controls once
+    const followCard = document.getElementById("followControlsCard");
+    followCard.innerHTML = "";
+    renderFollowBlock(followCard);
+    
+    refreshSelectedUI();
+    
 
     
     // ---------- FOLLOW-UP REPORT ----------
