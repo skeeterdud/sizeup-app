@@ -52,4 +52,328 @@
     }
 
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-    .
+    .btn{
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:12px 12px;
+      border-radius:14px;
+      font-size:15px;
+      font-weight:900
+    }
+    .btn.primary{border-color:rgba(45,212,191,.65);background:rgba(45,212,191,.14)}
+    .btn.danger{border-color:rgba(251,113,133,.7);background:rgba(251,113,133,.12)}
+
+    input[type="text"]{
+      width:100%;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      font-size:15px
+    }
+    label{display:block;color:var(--muted);font-size:12px;margin:10px 0 6px}
+    hr{border:none;border-top:1px solid rgba(255,255,255,.10);margin:14px 0}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MFD Size-Up Builder</h1>
+    <div class="hint">Tap selections → paragraph updates → Copy.</div>
+  </header>
+
+  <div class="wrap">
+    <div class="card" id="controls"></div>
+
+    <div class="card">
+      <div class="group-title"><b>Generated Size-Up</b></div>
+      <div class="output" id="outputBox">Make selections to build your size-up.</div>
+      <div class="row">
+        <button class="btn primary" id="copyBtn">Copy</button>
+        <button class="btn danger" id="clearBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Offline cache
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js"));
+  }
+
+  // ---------- Button Groups ----------
+  // mode: "single" or "multi"
+  const CONFIG = [
+    { key:"buildingSize", title:"Building Size", mode:"single", options:[
+      { value:"small",  label:"Small",  phrase:"a small" },
+      { value:"medium", label:"Medium", phrase:"a medium" },
+      { value:"large",  label:"Large",  phrase:"a large" },
+      { value:"mega",   label:"Mega",   phrase:"a mega" }
+    ]},
+
+    { key:"height", title:"Height (Floors)", mode:"single", options:[
+      { value:"1", label:"1", phrase:"one-story" },
+      { value:"2", label:"2", phrase:"two-story" },
+      { value:"3", label:"3", phrase:"three-story" },
+      { value:"4", label:"4", phrase:"four-story" },
+      { value:"5", label:"5", phrase:"five-story" }
+    ]},
+
+    { key:"occupancy", title:"Occupancy Type", mode:"single", options:[
+      { value:"house", label:"House", phrase:"house" },
+      { value:"apartment", label:"Apartment", phrase:"apartment" },
+      { value:"strip", label:"Strip Center", phrase:"strip center" },
+      { value:"commercial", label:"Commercial", phrase:"commercial" },
+      { value:"other", label:"Other (type)", phrase:"" }
+    ]},
+
+    { key:"conditions", title:"Condition", mode:"single", options:[
+      { value:"nothing", label:"Nothing Showing", phrase:"Nothing showing at this time." },
+      { value:"light", label:"Light Smoke", phrase:"Light smoke showing." },
+      { value:"heavy", label:"Heavy Smoke", phrase:"Heavy smoke showing." },
+      { value:"working", label:"Working Fire", phrase:"Working fire conditions present." },
+      { value:"defensive", label:"Defensive Conditions", phrase:"Defensive fire conditions present." }
+    ]},
+
+    { key:"problemSides", title:"Location of the Problem (multi)", mode:"multi", options:[
+      { value:"Alpha", label:"Alpha", phrase:"Alpha" },
+      { value:"Bravo", label:"Bravo", phrase:"Bravo" },
+      { value:"Charlie", label:"Charlie", phrase:"Charlie" },
+      { value:"Delta", label:"Delta", phrase:"Delta" }
+    ]},
+
+    { key:"iapTasks", title:"Initial Action Plan – Task (multi)", mode:"multi", options:[
+      { value:"Investigate", label:"Investigate", phrase:"Investigate" },
+      { value:"Water Supply", label:"Water Supply", phrase:"Establish water supply" },
+      { value:"Attack Line", label:"Attack Line", phrase:"Deploy attack line" },
+      { value:"Rescue", label:"Rescue", phrase:"Initiate rescue" },
+      { value:"OEO", label:"OEO", phrase:"Establish OEO" },
+      { value:"Defensive Op", label:"Defensive Op", phrase:"Set up defensive operations" }
+    ]},
+
+    { key:"iapLocation", title:"Initial Action Plan – Location", mode:"single", options:[
+      { value:"Alpha", label:"Alpha", phrase:"Alpha" },
+      { value:"Bravo", label:"Bravo", phrase:"Bravo" },
+      { value:"Charlie", label:"Charlie", phrase:"Charlie" },
+      { value:"Delta", label:"Delta", phrase:"Delta" }
+    ]},
+
+    { key:"iapObjectives", title:"Initial Action Plan – Objective (multi)", mode:"multi", options:[
+      { value:"Fire Attack", label:"Fire Attack", phrase:"Fire attack" },
+      { value:"Primary Search", label:"Primary Search", phrase:"Primary search" }
+    ]},
+
+    { key:"strategy", title:"Strategy", mode:"single", options:[
+      { value:"Offensive", label:"Offensive", phrase:"Offensive" },
+      { value:"Defensive", label:"Defensive", phrase:"Defensive" }
+    ]}
+  ];
+
+  // ---------- Text Fields ----------
+  const TEXT_FIELDS = [
+    { key:"occupancyOther", label:"Occupancy Type (Other) – type here (only if you chose Other)", placeholder:"e.g., school, church, warehouse…" },
+    { key:"problemLocationText", label:"Location of the Problem (free text)", placeholder:"e.g., 2nd floor Bravo side / roof line / rear storage…" },
+    { key:"assumeCommand", label:"Assume/Name Command (type it)", placeholder:"e.g., Engine 1 assuming Main Street Command" }
+  ];
+
+  // ---------- State ----------
+  const state = {};
+  const controlsEl = document.getElementById("controls");
+  const outputBox = document.getElementById("outputBox");
+
+  function init() {
+    renderControls();
+    document.getElementById("copyBtn").addEventListener("click", copyText);
+    document.getElementById("clearBtn").addEventListener("click", clearAll);
+    updateOutput();
+  }
+
+  function renderControls() {
+    controlsEl.innerHTML = "";
+
+    // Render groups in order with a divider before IAP
+    CONFIG.forEach(group => {
+      if (group.key === "iapTasks") {
+        const hr = document.createElement("hr");
+        controlsEl.appendChild(hr);
+        const title = document.createElement("div");
+        title.className = "group-title";
+        title.innerHTML = `<b>Initial Action Plan</b>`;
+        controlsEl.appendChild(title);
+      }
+
+      const wrap = document.createElement("div");
+      wrap.style.marginBottom = "12px";
+
+      const title = document.createElement("div");
+      title.className = "group-title";
+      title.innerHTML = `<b>${group.title}</b>`;
+      wrap.appendChild(title);
+
+      const grid = document.createElement("div");
+      grid.className = "grid";
+
+      group.options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.className = "choice";
+        btn.textContent = opt.label;
+        btn.dataset.key = group.key;
+        btn.dataset.value = opt.value;
+
+        btn.addEventListener("click", () => onChoice(group, opt.value));
+        grid.appendChild(btn);
+      });
+
+      wrap.appendChild(grid);
+      controlsEl.appendChild(wrap);
+    });
+
+    // Text fields
+    TEXT_FIELDS.forEach(tf => {
+      const label = document.createElement("label");
+      label.textContent = tf.label;
+      controlsEl.appendChild(label);
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = tf.placeholder;
+      input.value = state[tf.key] || "";
+      input.addEventListener("input", (e) => {
+        state[tf.key] = e.target.value;
+        updateOutput();
+      });
+      controlsEl.appendChild(input);
+    });
+
+    refreshSelectedUI();
+  }
+
+  function onChoice(group, value) {
+    if (group.mode === "single") {
+      state[group.key] = value;
+    } else {
+      const current = Array.isArray(state[group.key]) ? state[group.key] : [];
+      state[group.key] = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
+    }
+    refreshSelectedUI();
+    updateOutput();
+  }
+
+  function refreshSelectedUI() {
+    document.querySelectorAll("button.choice").forEach(btn => {
+      const key = btn.dataset.key;
+      const value = btn.dataset.value;
+      const group = CONFIG.find(g => g.key === key);
+      const current = state[key];
+
+      let selected = false;
+      if (group.mode === "single") selected = current === value;
+      else selected = Array.isArray(current) && current.includes(value);
+
+      btn.classList.toggle("selected", selected);
+    });
+  }
+
+  function optionPhrase(groupKey, value) {
+    const group = CONFIG.find(g => g.key === groupKey);
+    if (!group) return "";
+    return (group.options.find(o => o.value === value)?.phrase || "").trim();
+  }
+
+  function singlePhrase(key) {
+    const val = state[key];
+    if (!val) return "";
+    return optionPhrase(key, val);
+  }
+
+  function multiList(key) {
+    const arr = Array.isArray(state[key]) ? state[key] : [];
+    return arr.filter(Boolean);
+  }
+
+  function updateOutput() {
+    // Opening: size + height + occupancy (or occupancyOther text)
+    const size = singlePhrase("buildingSize");
+    const height = singlePhrase("height");
+    let occupancy = "";
+    const occVal = state.occupancy;
+
+    if (occVal === "other") {
+      occupancy = (state.occupancyOther || "").trim();
+    } else if (occVal) {
+      occupancy = optionPhrase("occupancy", occVal);
+    }
+
+    const openingParts = [];
+    if (size) openingParts.push(size);
+    if (height) openingParts.push(height);
+    if (occupancy) openingParts.push(occupancy);
+
+    let text = openingParts.length
+      ? `We have ${openingParts.join(", ")}.`
+      : `We have a structure.`;
+
+    // Conditions sentence
+    const cond = singlePhrase("conditions");
+    if (cond) text += `\n\n${cond}`;
+
+    // Location of the problem: multi sides + free text
+    const sides = multiList("problemSides");
+    const sidesText = sides.length ? sides.join("/") : "";
+    const locFree = (state.problemLocationText || "").trim();
+    if (sidesText || locFree) {
+      text += ` Location of the problem: ${[sidesText, locFree].filter(Boolean).join(" – ")}.`;
+    }
+
+    // IAP
+    const tasks = multiList("iapTasks").map(v => optionPhrase("iapTasks", v)).filter(Boolean);
+    const iapLoc = singlePhrase("iapLocation");
+    const objectives = multiList("iapObjectives").map(v => optionPhrase("iapObjectives", v)).filter(Boolean);
+
+    if (tasks.length || iapLoc || objectives.length) {
+      text += `\n\nInitial Action Plan:`;
+      if (tasks.length) text += ` Tasks: ${tasks.join(", ")}.`;
+      if (iapLoc) text += ` Location: ${iapLoc}.`;
+      if (objectives.length) text += ` Objectives: ${objectives.join(", ")}.`;
+    }
+
+    // Strategy
+    const strat = singlePhrase("strategy");
+    if (strat) text += `\n\nStrategy: ${strat}.`;
+
+    // Assume/Name Command (text)
+    const cmd = (state.assumeCommand || "").trim();
+    if (cmd) text += `\n\nAssume/Name Command: ${cmd}.`;
+
+    outputBox.textContent = text;
+  }
+
+  async function copyText() {
+    const text = outputBox.textContent || "";
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Copied!");
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      alert("Copied!");
+    }
+  }
+
+  function clearAll() {
+    Object.keys(state).forEach(k => delete state[k]);
+    renderControls();
+    updateOutput();
+  }
+
+  init();
+</script>
+</body>
+</html>
