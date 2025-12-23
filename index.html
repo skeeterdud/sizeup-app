@@ -329,9 +329,9 @@
     }
 
     // IAP
-    const tasks = multiList("iapTasks").map(v => optionPhrase("iapTasks", v)).filter(Boolean);
-    const iapLoc = singlePhrase("iapLocation");
-    const objectives = multiList("iapObjectives").map(v => optionPhrase("iapObjectives", v)).filter(Boolean);
+    const tasks = multiList("Tasks").map(v => optionPhrase("iapTasks", v)).filter(Boolean);
+    const iapLoc = singlePhrase("Location");
+    const objectives = multiList("Objectives").map(v => optionPhrase("iapObjectives", v)).filter(Boolean);
 
     if (tasks.length || iapLoc || objectives.length) {
       text += `\n\nInitial Action Plan:`;
