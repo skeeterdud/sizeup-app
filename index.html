@@ -140,7 +140,6 @@
       margin:10px 0 6px;
     }
 
-    /* Buttons (still used for many sections) */
     .grid{
       display:grid;
       grid-template-columns:repeat(4,minmax(0,1fr));
@@ -173,7 +172,6 @@
       box-shadow:0 10px 22px rgba(37,99,235,.22);
     }
 
-    /* Dropdowns */
     .selectRow{
       display:grid;
       grid-template-columns:1fr 1fr;
@@ -220,12 +218,26 @@
       color:#e9eefc;
     }
 
-    .row{
+    .row3{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    @media (max-width: 700px){
+      .row3{grid-template-columns:1fr;}
+    }
+
+    .row2{
       display:grid;
       grid-template-columns:1fr 1fr;
       gap:10px;
       margin-top:10px;
     }
+    @media (max-width: 700px){
+      .row2{grid-template-columns:1fr;}
+    }
+
     .btn{
       border:1px solid rgba(255,255,255,.16);
       background: rgba(255,255,255,.06);
@@ -258,29 +270,32 @@
 <body>
 <header>
   <h1>MFD Size-Up Builder</h1>
-  <div class="hint">Tap selections → paragraphs update → Copy.</div>
+  <div class="hint">Tap selections → paragraphs update → Copy / Print.</div>
 </header>
 
 <div class="wrap">
 
-  <!-- Controls -->
+  <!-- SECTION: IRR CONTROLS (everything needed to build the size-up) -->
   <div class="card" id="controls"></div>
 
-  <!-- Generated Size-Up (stays before follow-up) -->
+  <!-- Generated Size-Up -->
   <div class="card">
     <div class="outputTitle"><b>Generated Size-Up</b></div>
     <div class="output" id="outputBox">Make selections to build your size-up.</div>
-    <div class="row">
+    <div class="row3">
       <button class="btn primary" id="copyBtn">Copy Size-Up</button>
+      <button class="btn primary" id="printBtn">Print / PDF</button>
       <button class="btn danger" id="clearSizeupBtn">Clear Size-Up</button>
     </div>
   </div>
 
-  <!-- Follow-Up Report controls & output will come AFTER size-up output -->
+  <!-- Follow-Up Report section STARTS here (controls + output) -->
+  <div class="card" id="followControlsCard"></div>
+
   <div class="card">
     <div class="outputTitle"><b>Generated Follow-Up Report</b></div>
     <div class="output" id="followOutputBox">Make selections to build your follow-up report.</div>
-    <div class="row">
+    <div class="row2">
       <button class="btn primary" id="copyFollowBtn">Copy Follow-Up</button>
       <button class="btn danger" id="clearFollowBtn">Clear Follow-Up</button>
     </div>
@@ -289,14 +304,12 @@
 </div>
 
 <script>
-  // Offline cache
+  // Offline cache (if caching drives you crazy while editing, comment this out)
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js"));
   }
 
-  // ---------- Groups (buttons) ----------
   const CONFIG = [
-    // IRR building side
     { key:"buildingSize", title:"Building Size", mode:"single", options:[
       { value:"Small",  label:"Small",  phrase:"Small" },
       { value:"Medium", label:"Medium", phrase:"Medium" },
@@ -318,7 +331,6 @@
       { value:"other", label:"Other", phrase:"" }
     ]},
 
-    // IRR problem side
     { key:"conditions", title:"Condition", mode:"single", options:[
       { value:"nothing", label:"Nothing Showing", phrase:"nothing showing" },
       { value:"light", label:"Light Smoke", phrase:"light smoke" },
@@ -333,7 +345,6 @@
       { value:"Delta", label:"Delta", phrase:"delta" }
     ]},
 
-    // IAP
     { key:"iapTasks", title:"Task (multi)", mode:"multi", options:[
       { value:"Investigate", label:"Investigate", phrase:"investigating" },
       { value:"Water Supply", label:"Water Supply", phrase:"setting up water supply" },
@@ -351,50 +362,46 @@
     { key:"iapObjectives", title:"Objective (multi)", mode:"multi", options:[
       { value:"Fire Attack", label:"Fire Attack", phrase:"fire attack" },
       { value:"Primary Search", label:"Primary Search", phrase:"primary search" }
-    ]},
-
-    // Strategy confirm/change IAP
-    { key:"confirmStrategy", title:"Confirm Strategy / Change IAP", mode:"single", options:[
-      { value:"Offensive", label:"Offensive", phrase:"offensive" },
-      { value:"Defensive", label:"Defensive", phrase:"defensive" }
-    ]},
-
-    // Resource determination
-    { key:"resourceDetermination", title:"Resource Determination", mode:"single", options:[
-      { value:"Recall units", label:"Recall units", phrase:"Recall units" },
-      { value:"2nd alarm", label:"2nd alarm", phrase:"2nd alarm" }
     ]}
   ];
 
-  // Dropdown data
   const BATTALIONS = ["", "BC1", "BC2"];
   const APPARATUS = ["",
     "Trk 1","Eng 2","Trk 3","Eng 4","Trk 5","Eng 6","Eng 7","Trk 9","Eng 10","Trk 11",
     "Med 1","Med 2","Med 3","Med 5","Med 6","Med 7","Med 9","Med 10","Med 11"
   ];
 
-  // Follow-up button group (completed / not completed)
   const FOLLOW = [
     { key:"r360", title:"Results of the 360", mode:"single", options:[
-      { value:"Completed", label:"Completed", phrase:"Completed" },
-      { value:"Not completed", label:"Not completed", phrase:"Not completed" }
+      { value:"Completed", label:"Completed" },
+      { value:"Not completed", label:"Not completed" }
+    ]},
+    { key:"confirmStrategy", title:"Confirm Strategy / Change IAP", mode:"single", options:[
+      { value:"Offensive", label:"Offensive" },
+      { value:"Defensive", label:"Defensive" }
+    ]},
+    { key:"resourceDetermination", title:"Resource Determination", mode:"single", options:[
+      { value:"Recall units", label:"Recall units" },
+      { value:"2nd alarm", label:"2nd alarm" }
     ]}
   ];
 
-  // ---------- State ----------
   const state = {};
   const fstate = {};
 
   const controlsEl = document.getElementById("controls");
+  const followControlsCard = document.getElementById("followControlsCard");
   const outputBox = document.getElementById("outputBox");
   const followOutputBox = document.getElementById("followOutputBox");
 
   function init(){
     renderControls();
+    renderFollowControls();
     updateOutputs();
 
     document.getElementById("copyBtn").addEventListener("click", () => copyFrom(outputBox, "Copied size-up!"));
     document.getElementById("clearSizeupBtn").addEventListener("click", clearSizeup);
+    document.getElementById("printBtn").addEventListener("click", printPDF);
 
     document.getElementById("copyFollowBtn").addEventListener("click", () => copyFrom(followOutputBox, "Copied follow-up!"));
     document.getElementById("clearFollowBtn").addEventListener("click", clearFollow);
@@ -412,7 +419,7 @@
 
   function onFollowChoice(group, value){
     fstate[group.key] = value;
-    renderControls();
+    renderFollowControls();
     updateOutputs();
   }
 
@@ -423,7 +430,7 @@
     const title = document.createElement("div");
     title.style.margin = "0 0 10px 0";
     title.innerHTML = `<b>${group.title}</b>`;
-    parentEl.appendChild(title);
+    wrap.appendChild(title);
 
     const grid = document.createElement("div");
     grid.className = "grid";
@@ -440,7 +447,6 @@
 
     wrap.appendChild(grid);
 
-    // Occupancy Other input directly under Occupancy
     if (group.key === "occupancy" && state.occupancy === "other") {
       const label = document.createElement("label");
       label.textContent = "Occupancy Type";
@@ -457,7 +463,6 @@
       wrap.appendChild(input);
     }
 
-    // Problem location free-text directly under sides
     if (group.key === "problemSides") {
       const label = document.createElement("label");
       label.textContent = "Location of the Problem";
@@ -530,136 +535,11 @@
     parentEl.appendChild(block);
   }
 
-  function renderFollowBlock(parentEl){
-    const block = document.createElement("div");
-    block.className = "block follow";
-    block.innerHTML = `<h2>Follow Up Report</h2>`;
-
-    // Results of the 360 buttons
-    const group = FOLLOW[0];
-
-    const title = document.createElement("div");
-    title.style.margin = "0 0 10px 0";
-    title.innerHTML = `<b>${group.title}</b>`;
-    block.appendChild(title);
-
-    const grid = document.createElement("div");
-    grid.className = "grid";
-    group.options.forEach(opt => {
-      const btn = document.createElement("button");
-      btn.className = "choice";
-      btn.dataset.fkey = group.key;
-      btn.dataset.fvalue = opt.value;
-      btn.textContent = opt.label;
-      btn.addEventListener("click", () => onFollowChoice(group, opt.value));
-      grid.appendChild(btn);
-    });
-    block.appendChild(grid);
-
-    // Additional information (always available)
-    const addLabel = document.createElement("label");
-    addLabel.textContent = "Additional information";
-    block.appendChild(addLabel);
-
-    const addInput = document.createElement("input");
-    addInput.type = "text";
-    addInput.placeholder = "Optional notes…";
-    addInput.value = fstate.additional || "";
-    addInput.addEventListener("input", (e) => {
-      fstate.additional = e.target.value;
-      updateOutputs();
-    });
-    block.appendChild(addInput);
-
-    // Immediate safety concerns (bold label)
-    const safLabel = document.createElement("span");
-    safLabel.className = "boldLabel";
-    safLabel.textContent = "Immediate safety concerns";
-    block.appendChild(safLabel);
-
-    const safInput = document.createElement("input");
-    safInput.type = "text";
-    safInput.placeholder = "e.g., power lines down, propane, unstable wall…";
-    safInput.value = fstate.safety || "";
-    safInput.addEventListener("input", (e) => {
-      fstate.safety = e.target.value;
-      updateOutputs();
-    });
-    block.appendChild(safInput);
-
-    // Confirm Strategy / Change IAP (buttons)
-    const confirmGroup = CONFIG.find(g => g.key === "confirmStrategy");
-    const cTitle = document.createElement("div");
-    cTitle.style.margin = "12px 0 10px 0";
-    cTitle.innerHTML = `<b>${confirmGroup.title}</b>`;
-    block.appendChild(cTitle);
-
-    const cGrid = document.createElement("div");
-    cGrid.className = "grid";
-    confirmGroup.options.forEach(opt => {
-      const btn = document.createElement("button");
-      btn.className = "choice";
-      btn.dataset.fkey = "confirmStrategy";
-      btn.dataset.fvalue = opt.value;
-      btn.textContent = opt.label;
-      btn.addEventListener("click", () => {
-        fstate.confirmStrategy = opt.value;
-        renderControls();
-        updateOutputs();
-      });
-      cGrid.appendChild(btn);
-    });
-    block.appendChild(cGrid);
-
-    // Confirm strategy free text
-    const cTextLabel = document.createElement("label");
-    cTextLabel.textContent = "Notes";
-    block.appendChild(cTextLabel);
-
-    const cTextInput = document.createElement("input");
-    cTextInput.type = "text";
-    cTextInput.placeholder = "Optional notes…";
-    cTextInput.value = fstate.confirmNotes || "";
-    cTextInput.addEventListener("input", (e) => {
-      fstate.confirmNotes = e.target.value;
-      updateOutputs();
-    });
-    block.appendChild(cTextInput);
-
-    // Resource determination
-    const resGroup = CONFIG.find(g => g.key === "resourceDetermination");
-    const rTitle = document.createElement("div");
-    rTitle.style.margin = "12px 0 10px 0";
-    rTitle.innerHTML = `<b>${resGroup.title}</b>`;
-    block.appendChild(rTitle);
-
-    const rGrid = document.createElement("div");
-    rGrid.className = "grid";
-    resGroup.options.forEach(opt => {
-      const btn = document.createElement("button");
-      btn.className = "choice";
-      btn.dataset.fkey = "resourceDetermination";
-      btn.dataset.fvalue = opt.value;
-      btn.textContent = opt.label;
-      btn.addEventListener("click", () => {
-        fstate.resourceDetermination = opt.value;
-        renderControls();
-        updateOutputs();
-      });
-      rGrid.appendChild(btn);
-    });
-    block.appendChild(rGrid);
-
-    parentEl.appendChild(block);
-  }
-
   function renderControls(){
     controlsEl.innerHTML = "";
 
-    // 1) Batt + Apparatus dropdowns side-by-side
     renderDropdownBlock(controlsEl);
 
-    // 2) IRR (two columns)
     const irr = document.createElement("div");
     irr.className = "irrWrap";
     irr.innerHTML = `<div class="irrTitle">IRR</div>`;
@@ -684,7 +564,6 @@
     irr.appendChild(cols);
     controlsEl.appendChild(irr);
 
-    // 3) IAP (left) and Strategy+Command (right) in same box
     const row = document.createElement("div");
     row.className = "miniRow";
 
@@ -699,13 +578,10 @@
     cmd.className = "block cmd";
     cmd.innerHTML = `<h2>Strategy / Command</h2>`;
 
-    // Strategy buttons (use existing CONFIG key "strategy"? We removed it.
-    // We'll use confirmStrategy for strategy selection in size-up too? No: size-up needs Strategy in output.
-    // We'll store size-up strategy in state.strategy, with buttons here:
-    const stratLabel = document.createElement("div");
-    stratLabel.style.margin = "0 0 10px 0";
-    stratLabel.innerHTML = `<b>Strategy</b>`;
-    cmd.appendChild(stratLabel);
+    const stratTitle = document.createElement("div");
+    stratTitle.style.margin = "0 0 10px 0";
+    stratTitle.innerHTML = `<b>Strategy</b>`;
+    cmd.appendChild(stratTitle);
 
     const stratGrid = document.createElement("div");
     stratGrid.className = "grid";
@@ -730,7 +606,7 @@
 
     const cmdInput = document.createElement("input");
     cmdInput.type = "text";
-    cmdInput.placeholder = "e.g., Trk 1 is now Main Street Command";
+    cmdInput.placeholder = "e.g., Main Street";
     cmdInput.value = state.commandText || "";
     cmdInput.addEventListener("input", (e) => {
       state.commandText = e.target.value;
@@ -742,33 +618,108 @@
     row.appendChild(cmd);
     controlsEl.appendChild(row);
 
-    // 4) Follow Up Report (after generated size-up in the page layout, but controls are here still)
-    // You asked: "generated size up, then start the next section with follow up report."
-    // Controls are above outputs; to match your request visually, we keep follow-up controls below this line:
-    renderFollowBlock(controlsEl);
-
     refreshSelectedUI();
   }
 
+  function renderFollowControls(){
+    followControlsCard.innerHTML = "";
+    const block = document.createElement("div");
+    block.className = "block follow";
+    block.innerHTML = `<h2>Follow Up Report</h2>`;
+
+    // Results of 360
+    const g360 = FOLLOW.find(g => g.key === "r360");
+    addFollowButtons(block, g360);
+
+    // Additional info
+    const addLabel = document.createElement("label");
+    addLabel.textContent = "Additional information";
+    block.appendChild(addLabel);
+
+    const addInput = document.createElement("input");
+    addInput.type = "text";
+    addInput.placeholder = "Optional notes…";
+    addInput.value = fstate.additional || "";
+    addInput.addEventListener("input", (e) => { fstate.additional = e.target.value; updateOutputs(); });
+    block.appendChild(addInput);
+
+    // Immediate safety concerns (bold label)
+    const safLabel = document.createElement("span");
+    safLabel.className = "boldLabel";
+    safLabel.textContent = "Immediate safety concerns";
+    block.appendChild(safLabel);
+
+    const safInput = document.createElement("input");
+    safInput.type = "text";
+    safInput.placeholder = "e.g., power lines down, propane, unstable wall…";
+    safInput.value = fstate.safety || "";
+    safInput.addEventListener("input", (e) => { fstate.safety = e.target.value; updateOutputs(); });
+    block.appendChild(safInput);
+
+    // Confirm strategy/change IAP
+    addFollowButtons(block, FOLLOW.find(g => g.key === "confirmStrategy"));
+
+    const notesLabel = document.createElement("label");
+    notesLabel.textContent = "Notes";
+    block.appendChild(notesLabel);
+
+    const notesInput = document.createElement("input");
+    notesInput.type = "text";
+    notesInput.placeholder = "Optional notes…";
+    notesInput.value = fstate.confirmNotes || "";
+    notesInput.addEventListener("input", (e) => { fstate.confirmNotes = e.target.value; updateOutputs(); });
+    block.appendChild(notesInput);
+
+    // Resource determination
+    addFollowButtons(block, FOLLOW.find(g => g.key === "resourceDetermination"));
+
+    followControlsCard.appendChild(block);
+    refreshSelectedUI();
+  }
+
+  function addFollowButtons(parent, group){
+    const title = document.createElement("div");
+    title.style.margin = "12px 0 10px 0";
+    title.innerHTML = `<b>${group.title}</b>`;
+    parent.appendChild(title);
+
+    const grid = document.createElement("div");
+    grid.className = "grid";
+
+    group.options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.dataset.fkey = group.key;
+      btn.dataset.fvalue = opt.value;
+      btn.textContent = opt.label;
+      btn.addEventListener("click", () => onFollowChoice(group, opt.value));
+      grid.appendChild(btn);
+    });
+
+    parent.appendChild(grid);
+  }
+
   function refreshSelectedUI(){
-    // size-up buttons
     document.querySelectorAll("button.choice").forEach(btn => {
       if (btn.dataset.key) {
         const key = btn.dataset.key;
         const value = btn.dataset.value;
+
         if (key === "strategy") {
           btn.classList.toggle("selected", (state.strategy || "") === value);
           return;
         }
+
         const group = CONFIG.find(g => g.key === key);
         if (!group) return;
+
         const current = state[key];
         const selected = (group.mode === "single")
           ? current === value
           : Array.isArray(current) && current.includes(value);
         btn.classList.toggle("selected", selected);
       }
-      // follow-up buttons
+
       if (btn.dataset.fkey) {
         const k = btn.dataset.fkey;
         const v = btn.dataset.fvalue;
@@ -795,8 +746,16 @@
     return sidesArr.map(s => s.toLowerCase()).join(" ");
   }
 
+  function normalizeCommandName(raw){
+    let s = (raw || "").trim();
+    if (!s) return "";
+    // If they already typed "Command" at the end, keep it
+    if (/command\.?$/i.test(s)) return s.replace(/\.*$/,"");
+    // Otherwise append
+    return `${s} Command`;
+  }
+
   function updateOutputs(){
-    // ---------- SIZE-UP ----------
     const battalion = (state.battalion || "").trim();
     const apparatus = (state.apparatus || "").trim();
 
@@ -816,7 +775,7 @@
     const objectives = multiList("iapObjectives").map(v => optionPhrase("iapObjectives", v)).filter(Boolean);
 
     const strategy = (state.strategy || "Offensive").toLowerCase();
-    const cmdText = (state.commandText || "").trim();
+    const cmdText = normalizeCommandName(state.commandText);
 
     const buildingParts = [bSize, bHeight, occ].filter(Boolean);
     const buildingPhrase = buildingParts.length ? buildingParts.join(" ") : "a structure";
@@ -846,7 +805,7 @@
 
     outputBox.textContent = [line1, line2, line3].join("\n\n");
 
-    // ---------- FOLLOW-UP REPORT ----------
+    // Follow-up
     const r360 = (fstate.r360 || "").trim();
     const additional = (fstate.additional || "").trim();
     const safety = (fstate.safety || "").trim();
@@ -861,8 +820,7 @@
     if (confirmStrat) lines.push(`Confirm Strategy/Change IAP: ${confirmStrat}${confirmNotes ? " — " + confirmNotes : ""}.`);
     if (resource) lines.push(`Resource determination: ${resource}.`);
 
-    if (!lines.length) lines.push("Follow-up report: (make selections above).");
-    followOutputBox.textContent = lines.join("\n");
+    followOutputBox.textContent = lines.length ? lines.join("\n") : "Follow-up report: (make selections above).";
   }
 
   async function copyFrom(el, msg){
@@ -882,8 +840,6 @@
   }
 
   function clearSizeup(){
-    // Clear only size-up state
-    const keep = {}; // nothing
     Object.keys(state).forEach(k => delete state[k]);
     renderControls();
     updateOutputs();
@@ -891,8 +847,61 @@
 
   function clearFollow(){
     Object.keys(fstate).forEach(k => delete fstate[k]);
-    renderControls();
+    renderFollowControls();
     updateOutputs();
+  }
+
+  function escapeHtml(str){
+    return (str || "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function printPDF(){
+    const sizeup = outputBox.textContent || "";
+    const follow = followOutputBox.textContent || "";
+    const stamp = new Date().toLocaleString();
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Pop-up blocked. Allow pop-ups to print."); return; }
+
+    w.document.open();
+    w.document.write(`
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Size-Up Report</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:28px;color:#111}
+    h1{font-size:18px;margin:0 0 6px}
+    .stamp{font-size:12px;color:#555;margin-bottom:18px}
+    h2{font-size:14px;margin:18px 0 8px}
+    .box{border:1px solid #ddd;border-radius:10px;padding:12px;white-space:pre-wrap;line-height:1.35}
+    .footer{margin-top:18px;font-size:11px;color:#666}
+    @media print { body{margin:18mm} }
+  </style>
+</head>
+<body>
+  <h1>MFD Size-Up Builder</h1>
+  <div class="stamp">${escapeHtml(stamp)}</div>
+
+  <h2>Generated Size-Up</h2>
+  <div class="box">${escapeHtml(sizeup)}</div>
+
+  <h2>Generated Follow-Up Report</h2>
+  <div class="box">${escapeHtml(follow)}</div>
+
+  <div class="footer">Generated from the MFD Size-Up Builder</div>
+  <script>window.onload=()=>window.print();</script>
+</body>
+</html>
+    `);
+    w.document.close();
   }
 
   init();
