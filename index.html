@@ -287,7 +287,7 @@
   <div class="output" id="followOutputBox"></div>
   
 </div>
-
+</div>
 <script>
   // Offline cache
   if ("serviceWorker" in navigator) {
@@ -869,18 +869,8 @@
   
     
     // add follow-up controls once per render
-    // after you append the Strategy/Command row
-    controlsEl.appendChild(row);
-
-    // NOW render follow-up controls once
-    const followCard = document.getElementById("followControlsCard");
-    followCard.innerHTML = "";
-    renderFollowBlock(followCard);
-    
-    refreshSelectedUI();
-    
-
-    
+        
+  
     // ---------- FOLLOW-UP REPORT ----------
     const r360 = (fstate.r360 || "").trim();
     const additional = (fstate.additional || "").trim();
