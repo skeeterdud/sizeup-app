@@ -1021,7 +1021,7 @@ if ((fstate.r360 || "").trim()) {
     const fBattalion = battalionDisplay(state.battalion);
     const fCommand = normalizeCommandName(state.commandText);
 
-    const r360 = (fstate.r360 || "").trim();
+    const r360Findings = (fstate.r360Findings || "").trim();
     const safetyMode = (fstate.safetyMode || "").trim();
     const safetyText = (fstate.safetyText || "").trim();
     const changeIap = (fstate.changeIap || "").trim();
@@ -1051,12 +1051,22 @@ newIapLine = `There is a change to the IAP, ${state.apparatus ? state.apparatus 
     const parts = [];
 
     // lead-in
-    const lead =
-      `${fBattalion ? fBattalion + " " : ""}` +
-      `${fCommand ? "From " + fCommand + ", " : ""}` +
-      `${r360 ? "360 was " + r360 : ""}`.trim();
+   const r360Findings = (fstate.r360Findings || "").trim();
 
-    if (lead) parts.push(lead + (lead.endsWith(".") ? "" : ","));
+let lead =
+  `${fBattalion ? fBattalion + " " : ""}` +
+  `${fCommand ? "From " + fCommand + ", " : ""}`;
+
+if (r360) {
+  lead += `360 was ${r360}`;
+  if (r360Findings) {
+    lead += `, ${r360Findings}`;
+  }
+}
+
+lead = lead.trim();
+
+if (lead) parts.push(lead + (lead.endsWith(".") ? "" : ","));
 
     // safety sentence
     if (safetyMode === "None noted") {
