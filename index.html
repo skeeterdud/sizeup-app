@@ -1018,76 +1018,81 @@ if ((fstate.r360 || "").trim()) {
     outputBox.textContent = [line1, line2, line3].join("\n\n");
 
     // ---------- FOLLOW-UP ----------
-    const fBattalion = battalionDisplay(state.battalion);
-    const fCommand = normalizeCommandName(state.commandText);
+    // ---------- FOLLOW-UP ----------
+const fBattalion = battalionDisplay(state.battalion);
+const fCommand = normalizeCommandName(state.commandText);
 
-    const r360Findings = (fstate.r360Findings || "").trim();
-    const safetyMode = (fstate.safetyMode || "").trim();
-    const safetyText = (fstate.safetyText || "").trim();
-    const changeIap = (fstate.changeIap || "").trim();
-    const confirmStrat = ((fstate.confirmStrategy || state.strategy || "Offensive") + "").trim().toLowerCase();
-    const resource = (fstate.resourceDetermination || "").trim();
+const r360 = (fstate.r360 || "").trim();                 // ✅ DEFINE r360
+const r360Findings = (fstate.r360Findings || "").trim(); // ✅ ONLY ONCE
 
-    // build new IAP phrase (if change IAP = Yes)
-    let newIapLine = "";
-    if (changeIap === "Yes") {
-      const ntasks = (Array.isArray(fstate.newIapTasks) ? fstate.newIapTasks : [])
-        .map(v => optionPhrase("iapTasks", v)).filter(Boolean);
+const safetyMode = (fstate.safetyMode || "").trim();
+const safetyText = (fstate.safetyText || "").trim();
 
-      const nloc = buildIapLocationPhrase(fstate.newIapLocation, fstate.newIapLocationOther);
+const changeIap = (fstate.changeIap || "").trim();
+const confirmStrat = ((fstate.confirmStrategy || state.strategy || "Offensive") + "")
+  .trim()
+  .toLowerCase();
 
-      const nobj = (Array.isArray(fstate.newIapObjectives) ? fstate.newIapObjectives : [])
-        .map(v => optionPhrase("iapObjectives", v)).filter(Boolean);
+const resource = (fstate.resourceDetermination || "").trim();
 
-      const t = ntasks.length ? ntasks.join(", ") : "operating";
-      const o = nobj.length ? ` for ${nobj.join(", ")}` : "";
-      const l = nloc ? ` on the ${nloc}` : "";
+// build new IAP phrase (if change IAP = Yes)
+let newIapLine = "";
+if (changeIap === "Yes") {
+  const ntasks = (Array.isArray(fstate.newIapTasks) ? fstate.newIapTasks : [])
+    .map(v => optionPhrase("iapTasks", v))
+    .filter(Boolean);
 
-      // "read just like the IAP from generate size up"
-      // "read just like the IAP from generate size up"
-newIapLine = `There is a change to the IAP, ${state.apparatus ? state.apparatus + " " : ""}will be ${t}${l}${o}.`;
-    }
+  const nloc = buildIapLocationPhrase(fstate.newIapLocation, fstate.newIapLocationOther);
 
-    const parts = [];
+  const nobj = (Array.isArray(fstate.newIapObjectives) ? fstate.newIapObjectives : [])
+    .map(v => optionPhrase("iapObjectives", v))
+    .filter(Boolean);
 
-    // lead-in
-   const r360Findings = (fstate.r360Findings || "").trim();
+  const t = ntasks.length ? ntasks.join(", ") : "operating";
+  const o = nobj.length ? ` for ${nobj.join(", ")}` : "";
+  const l = nloc ? ` on the ${nloc}` : "";
 
+  // ✅ Required opening phrase when Change IAP = Yes
+  newIapLine = `There is a change to the IAP, ${state.apparatus ? state.apparatus + " " : ""}will be ${t}${l}${o}.`;
+}
+
+const parts = [];
+
+// Lead-in sentence (Battalion + From Command + 360 + findings)
 let lead =
   `${fBattalion ? fBattalion + " " : ""}` +
   `${fCommand ? "From " + fCommand + ", " : ""}`;
 
 if (r360) {
   lead += `360 was ${r360}`;
-  if (r360Findings) {
-    lead += `, ${r360Findings}`;
-  }
+  if (r360Findings) lead += `, ${r360Findings}`;
 }
 
 lead = lead.trim();
-
 if (lead) parts.push(lead + (lead.endsWith(".") ? "" : ","));
 
-    // safety sentence
-    if (safetyMode === "None noted") {
-      parts.push("no safety concerns,");
-    } else if (safetyMode === "Safety concerns") {
-      parts.push(`${safetyText ? safetyText : "Safety concerns noted"},`);
-    }
+// Safety sentence
+if (safetyMode === "None noted") {
+  // ✅ Your requested wording
+  parts.push("no safety concerns noted,");
+} else if (safetyMode === "Safety concerns") {
+  parts.push(`${safetyText ? safetyText : "Safety concerns noted"},`);
+}
 
-    // change IAP sentence (only if Yes)
-    if (newIapLine) parts.push(newIapLine.endsWith(".") ? newIapLine : (newIapLine + "."));
+// Change IAP (only if Yes)
+if (newIapLine) parts.push(newIapLine.endsWith(".") ? newIapLine : (newIapLine + "."));
 
-    // remaining strategy
-    parts.push(`We are remaining in the ${confirmStrat} strategy.`);
+// Strategy sentence
+parts.push(`We are remaining in the ${confirmStrat} strategy.`);
 
-    // resource
-    if (resource === "Recall units") parts.push("Recall units.");
-    if (resource === "2nd alarm") parts.push("Give me a 2nd alarm.");
+// Resource determination sentence
+if (resource === "Recall units") parts.push("Recall units.");
+if (resource === "2nd alarm") parts.push("Give me a 2nd alarm.");
 
-    // cleanup: if nothing selected, show helper text
-    const cleaned = parts.join(" ").replace(/\s+/g," ").trim();
-    followOutputBox.textContent = cleaned || "Follow-up report: (make selections above).";
+// Final output
+const cleaned = parts.join(" ").replace(/\s+/g," ").trim();
+followOutputBox.textContent = cleaned || "Follow-up report: (make selections above).";
+
   }
 
   function init(){
