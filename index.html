@@ -494,14 +494,75 @@ if (group.key === "occupancy" && state.occupancy === "other") {
   });
   wrap.appendChild(input);
 }
+const PROBLEM_LOCATION_QUICK = [
+  "1st floor",
+  "2nd floor",
+  "3rd floor",
+  "corner",
+  "roof",
+  "roof line",
+  "backyard",
+  "garage",
+  "Other"
+];
+
+function addProblemLocationToken(token){
+  if (!token) return;
+
+  // If "Other" is pressed, just focus the text box for manual entry
+  if (token.toLowerCase() === "other") {
+    const el = document.getElementById("problemLocationInput");
+    if (el) el.focus();
+    return;
+  }
+
+  const t = token; // keep provided casing
+  const current = (state.problemLocationText || "").trim();
+
+  // Append cleanly using " / " separator
+  if (!current) {
+    state.problemLocationText = t;
+  } else {
+    // avoid duplicate add (simple contains check)
+    const lowerCurrent = current.toLowerCase();
+    if (!lowerCurrent.includes(t.toLowerCase())) {
+      state.problemLocationText = `${current} / ${t}`;
+    }
+  }
+
+  renderControls();
+  updateOutputs();
+
+  // Keep focus on the input after pressing
+  const el = document.getElementById("problemLocationInput");
+  if (el) el.focus();
+}
 
 // Problem location free-text directly under sides
+// Problem location quick-picks + free-text directly under sides
 if (group.key === "problemSides") {
   const label = document.createElement("label");
   label.textContent = "Location of the Problem";
   wrap.appendChild(label);
 
+  // Quick-pick chips
+  const chipWrap = document.createElement("div");
+  chipWrap.className = "smallGrid";
+
+  PROBLEM_LOCATION_QUICK.forEach(txt => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.textContent = txt;
+    b.addEventListener("click", () => addProblemLocationToken(txt));
+    chipWrap.appendChild(b);
+  });
+
+  wrap.appendChild(chipWrap);
+
+  // Free text input
   const input = document.createElement("input");
+  input.id = "problemLocationInput";
   input.type = "text";
   input.placeholder = "e.g., 2nd floor / roof line / rear storage…";
   input.value = state.problemLocationText || "";
@@ -511,6 +572,7 @@ if (group.key === "problemSides") {
   });
   wrap.appendChild(input);
 }
+
 
 /* 🔹 NEW: IAP “Other” location free-text */
 if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iapLocation.includes("other")) {
