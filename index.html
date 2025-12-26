@@ -894,8 +894,12 @@ if (followCard) {
     const buildingParts = [bSize, bHeight, occ].filter(Boolean);
     const buildingPhrase = buildingParts.length ? buildingParts.join(" ") : "a structure";
 
-    const probParts = [sidesText, locFree].filter(Boolean);
-    const probPhrase = probParts.join(" ").trim();
+    let probPhrase = "";
+    if (sidesText && !locFree) {
+      probPhrase = `${sidesText} side`;      // alpha side / alpha bravo side
+    } else {
+      probPhrase = [sidesText, locFree].filter(Boolean).join(" ").trim();
+    }
 
     const taskPhrase = tasks.length ? tasks.join(", ") : "";
     const objPhrase = objectives.length ? objectives.join(", ") : "";
