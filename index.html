@@ -29,7 +29,7 @@
       --wmOpacity: 0.75;
       --wmSize: 820px;
     }
-   
+
     *{box-sizing:border-box}
     body{
       margin:0;
@@ -140,7 +140,6 @@
       margin:10px 0 6px;
     }
 
-    /* Buttons (still used for many sections) */
     .grid{
       display:grid;
       grid-template-columns:repeat(4,minmax(0,1fr));
@@ -151,6 +150,15 @@
     }
     @media (max-width: 600px){
       .grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    }
+
+    /* Smaller quick-buttons grid */
+    .grid.small{
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+    }
+    @media (max-width: 600px){
+      .grid.small{grid-template-columns:repeat(2,minmax(0,1fr));}
     }
 
     button.choice{
@@ -172,31 +180,14 @@
       color:#ffffff;
       box-shadow:0 10px 22px rgba(37,99,235,.22);
     }
-/* Small quick-pick buttons */
-.smallGrid{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-top:8px;
-}
 
-button.chip{
-  border:1px solid rgba(0,0,0,.12);
-  background:#ffffff;
-  color:var(--text);
-  padding:8px 10px;
-  border-radius:999px;
-  font-size:13px;
-  font-weight:800;
-  cursor:pointer;
-  user-select:none;
-  box-shadow:0 4px 12px rgba(0,0,0,.10);
-}
-button.chip:active{
-  transform: translateY(1px);
-}
+    button.choice.small{
+      padding:10px 10px;
+      font-size:13px;
+      font-weight:900;
+      border-radius:10px;
+    }
 
-    /* Dropdowns */
     .selectRow{
       display:grid;
       grid-template-columns:1fr 1fr;
@@ -243,31 +234,6 @@ button.chip:active{
       color:#e9eefc;
     }
 
-    .row{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-      margin-top:10px;
-    }
-    .btn{
-      border:1px solid rgba(255,255,255,.16);
-      background: rgba(255,255,255,.06);
-      color:#e9eefc;
-      padding:12px 12px;
-      border-radius:14px;
-      font-size:15px;
-      font-weight:900;
-      cursor:pointer;
-    }
-    .btn.primary{
-      border-color: rgba(255,255,255,.24);
-      background: rgba(255,255,255,.10);
-    }
-    .btn.danger{
-      border-color: rgba(193,18,31,.55);
-      background: rgba(193,18,31,.18);
-    }
-
     .boldLabel{
       font-weight:900;
       color:var(--text);
@@ -275,11 +241,17 @@ button.chip:active{
       margin:10px 0 6px;
       display:block;
     }
+
     #followControlsCard{
       border: 3px solid #2563eb;
       box-shadow: 0 0 0 4px rgba(37,99,235,.15);
-}
+    }
 
+    .twoBtnRow{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
   </style>
 </head>
 
@@ -290,36 +262,28 @@ button.chip:active{
 </header>
 
 <div class="wrap">
+  <div class="card" id="controls"></div>
 
-  <!-- IRR / Size-Up Controls -->
-<div class="card" id="controls"></div>
+  <div class="card">
+    <div class="outputTitle"><b>Generated Size-Up</b></div>
+    <div class="output" id="outputBox"></div>
+  </div>
 
-<!-- Generated Size-Up FIRST -->
-<div class="card">
-  <div class="outputTitle"><b>Generated Size-Up</b></div>
-  <div class="output" id="outputBox"></div>
-  
+  <div class="card" id="followControlsCard"></div>
+
+  <div class="card">
+    <div class="outputTitle"><b>Generated Follow-Up Report</b></div>
+    <div class="output" id="followOutputBox"></div>
+  </div>
 </div>
 
-<!-- Follow-Up CONTROLS -->
-<div class="card" id="followControlsCard"></div>
-  
-<!-- Generated Follow-Up -->
-<div class="card">
-  <div class="outputTitle"><b>Generated Follow-Up Report</b></div>
-  <div class="output" id="followOutputBox"></div>
-  
-</div>
-</div>
 <script>
-  // Offline cache
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js"));
   }
 
-  // ---------- Groups (buttons) ----------
+  // ---------- Groups (Size-up) ----------
   const CONFIG = [
-    // IRR building side
     { key:"buildingSize", title:"Building Size", mode:"single", options:[
       { value:"Small",  label:"Small",  phrase:"Small" },
       { value:"Medium", label:"Medium", phrase:"Medium" },
@@ -341,7 +305,6 @@ button.chip:active{
       { value:"other", label:"Other", phrase:"" }
     ]},
 
-    // IRR problem side
     { key:"conditions", title:"Condition", mode:"single", options:[
       { value:"nothing", label:"Nothing Showing", phrase:"nothing showing" },
       { value:"light", label:"Light Smoke", phrase:"light smoke" },
@@ -356,7 +319,6 @@ button.chip:active{
       { value:"Delta", label:"Delta", phrase:"delta" }
     ]},
 
-    // IAP
     { key:"iapTasks", title:"Task (multi)", mode:"multi", options:[
       { value:"Investigate", label:"Investigate", phrase:"investigating" },
       { value:"Water Supply", label:"Water Supply", phrase:"setting up water supply" },
@@ -365,8 +327,7 @@ button.chip:active{
       { value:"OEO", label:"OEO", phrase:"OEO" },
       { value:"Defensive Op", label:"Defensive Op", phrase:"defensive operations" }
     ]},
-    
-     { key:"iapLocation", title:"IAP Location (multi)", mode:"multi", options:[
+    { key:"iapLocation", title:"IAP Location (multi)", mode:"multi", options:[
       { value:"1st Floor", label:"1st Floor", phrase:"1st floor" },
       { value:"2nd Floor", label:"2nd Floor", phrase:"2nd floor" },
       { value:"3rd Floor", label:"3rd Floor", phrase:"3rd floor" },
@@ -377,39 +338,26 @@ button.chip:active{
       { value:"Delta",     label:"Delta",     phrase:"delta" },
       { value:"other",     label:"Other",     phrase:"" }
     ]},
-
-
     { key:"iapObjectives", title:"Objective (multi)", mode:"multi", options:[
       { value:"Fire Attack", label:"Fire Attack", phrase:"fire attack" },
       { value:"Primary Search", label:"Primary Search", phrase:"primary search" }
     ]},
 
-    // Strategy confirm/change IAP
-    { key:"confirmStrategy", title:"Confirm Strategy / Change IAP", mode:"single", options:[
-      { value:"Offensive", label:"Offensive", phrase:"offensive" },
-      { value:"Defensive", label:"Defensive", phrase:"defensive" }
-    ]},
-
-    // Resource determination
     { key:"resourceDetermination", title:"Resource Determination", mode:"single", options:[
       { value:"Recall units", label:"Recall units", phrase:"Recall units" },
       { value:"2nd alarm", label:"2nd alarm", phrase:"2nd alarm" }
     ]}
   ];
 
-  // Dropdown data
+  // Problem location quick buttons (small)
+  const PROBLEM_QUICK = [
+    "1st Floor","2nd Floor","3rd Floor","Corner","Roof","Roof Line","Backyard","Garage","Other"
+  ];
+
   const BATTALIONS = ["", "BC1", "BC2"];
   const APPARATUS = ["",
     "Trk 1","Eng 2","Trk 3","Eng 4","Trk 5","Eng 6","Eng 7","Trk 9","Eng 10","Trk 11",
     "Med 1","Med 2","Med 3","Med 5","Med 6","Med 7","Med 9","Med 10","Med 11"
-  ];
-
-  // Follow-up button group (completed / not completed)
-  const FOLLOW = [
-    { key:"r360", title:"Results of the 360", mode:"single", options:[
-      { value:"Completed", label:"Completed", phrase:"Completed" },
-      { value:"Not completed", label:"Not completed", phrase:"Not completed" }
-    ]}
   ];
 
   // ---------- State ----------
@@ -419,24 +367,6 @@ button.chip:active{
   const controlsEl = document.getElementById("controls");
   const outputBox = document.getElementById("outputBox");
   const followOutputBox = document.getElementById("followOutputBox");
-
-  function init(){
-  renderControls();
-  updateOutputs();
-
-  const copyBtn = document.getElementById("copyBtn");
-  if (copyBtn) copyBtn.addEventListener("click", () => copyFrom(outputBox, "Copied size-up!"));
-
-  const clearSizeupBtn = document.getElementById("clearSizeupBtn");
-  if (clearSizeupBtn) clearSizeupBtn.addEventListener("click", clearSizeup);
-
-  const copyFollowBtn = document.getElementById("copyFollowBtn");
-  if (copyFollowBtn) copyFollowBtn.addEventListener("click", () => copyFrom(followOutputBox, "Copied follow-up!"));
-
-  const clearFollowBtn = document.getElementById("clearFollowBtn");
-  if (clearFollowBtn) clearFollowBtn.addEventListener("click", clearFollow);
-}
-
 
   function onChoice(group, value){
     if (group.mode === "single") state[group.key] = value;
@@ -448,10 +378,69 @@ button.chip:active{
     updateOutputs();
   }
 
-  function onFollowChoice(group, value){
-    fstate[group.key] = value;
+  function onFollowChoice(groupKey, mode, value){
+    if (mode === "single"){
+      fstate[groupKey] = value;
+    } else {
+      const current = Array.isArray(fstate[groupKey]) ? fstate[groupKey] : [];
+      fstate[groupKey] = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+    }
     renderControls();
     updateOutputs();
+  }
+
+  function optionPhrase(groupKey, value){
+    const group = CONFIG.find(g => g.key === groupKey);
+    if (!group) return "";
+    return (group.options.find(o => o.value === value)?.phrase || "").trim();
+  }
+  function singlePhrase(key){
+    const val = state[key];
+    if (!val) return "";
+    return optionPhrase(key, val);
+  }
+  function multiList(key){
+    const arr = Array.isArray(state[key]) ? state[key] : [];
+    return arr.filter(Boolean);
+  }
+
+  function niceSidesDisplay(sidesArr){
+    return sidesArr.map(s => s.toLowerCase()).join(" ");
+  }
+
+  function mapIapLocation(val){
+    if (!val) return "";
+    const lower = String(val).toLowerCase();
+    if (["alpha","bravo","charlie","delta"].includes(lower)) return `${lower} side`;
+    if (lower.includes("floor")) return lower;
+    return lower;
+  }
+
+  function buildIapLocationPhrase(iapLocArr, otherText){
+    const arr = Array.isArray(iapLocArr) ? iapLocArr : [];
+    const parts = [];
+    for (const v of arr){
+      if (v === "other") continue;
+      parts.push(mapIapLocation(v));
+    }
+    const other = (otherText || "").trim();
+    if (arr.includes("other") && other) parts.push(other.toLowerCase());
+    const uniq = [...new Set(parts)].filter(Boolean);
+    return uniq.join(", ");
+  }
+
+  function normalizeCommandName(raw){
+    let s = (raw || "").trim();
+    if (!s) return "";
+    if (/command\.?$/i.test(s)) return s.replace(/\.*$/,"");
+    return `${s} Command`;
+  }
+
+  function battalionDisplay(code){
+    const c = (code || "").trim();
+    if (c === "BC1") return "Battalion 1";
+    if (c === "BC2") return "Battalion 2";
+    return "";
   }
 
   function renderButtonGroup(group, parentEl){
@@ -478,118 +467,80 @@ button.chip:active{
 
     wrap.appendChild(grid);
 
-    // Occupancy Other input directly under Occupancy
-if (group.key === "occupancy" && state.occupancy === "other") {
-  const label = document.createElement("label");
-  label.textContent = "Occupancy Type";
-  wrap.appendChild(label);
+    // Occupancy Other
+    if (group.key === "occupancy" && state.occupancy === "other") {
+      const label = document.createElement("label");
+      label.textContent = "Occupancy Type";
+      wrap.appendChild(label);
 
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = "e.g., school, church, warehouse…";
-  input.value = state.occupancyOther || "";
-  input.addEventListener("input", (e) => {
-    state.occupancyOther = e.target.value;
-    updateOutputs();
-  });
-  wrap.appendChild(input);
-}
-const PROBLEM_LOCATION_QUICK = [
-  "1st floor",
-  "2nd floor",
-  "3rd floor",
-  "corner",
-  "roof",
-  "roof line",
-  "backyard",
-  "garage",
-  "Other"
-];
-
-function addProblemLocationToken(token){
-  if (!token) return;
-
-  // If "Other" is pressed, just focus the text box for manual entry
-  if (token.toLowerCase() === "other") {
-    const el = document.getElementById("problemLocationInput");
-    if (el) el.focus();
-    return;
-  }
-
-  const t = token; // keep provided casing
-  const current = (state.problemLocationText || "").trim();
-
-  // Append cleanly using " / " separator
-  if (!current) {
-    state.problemLocationText = t;
-  } else {
-    // avoid duplicate add (simple contains check)
-    const lowerCurrent = current.toLowerCase();
-    if (!lowerCurrent.includes(t.toLowerCase())) {
-      state.problemLocationText = `${current} / ${t}`;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "e.g., school, church, warehouse…";
+      input.value = state.occupancyOther || "";
+      input.addEventListener("input", (e) => {
+        state.occupancyOther = e.target.value;
+        updateOutputs();
+      });
+      wrap.appendChild(input);
     }
-  }
 
-  renderControls();
-  updateOutputs();
+    // Problem location (quick buttons + text)
+    if (group.key === "problemSides") {
+      const quickTitle = document.createElement("label");
+      quickTitle.textContent = "Location of the Problem Area (quick)";
+      wrap.appendChild(quickTitle);
 
-  // Keep focus on the input after pressing
-  const el = document.getElementById("problemLocationInput");
-  if (el) el.focus();
-}
+      const qGrid = document.createElement("div");
+      qGrid.className = "grid small";
 
-// Problem location free-text directly under sides
-// Problem location quick-picks + free-text directly under sides
-if (group.key === "problemSides") {
-  const label = document.createElement("label");
-  label.textContent = "Location of the Problem";
-  wrap.appendChild(label);
+      PROBLEM_QUICK.forEach(label => {
+        const btn = document.createElement("button");
+        btn.className = "choice small";
+        btn.textContent = label;
+        btn.addEventListener("click", () => {
+          const current = Array.isArray(state.problemLocQuick) ? state.problemLocQuick : [];
+          state.problemLocQuick = current.includes(label)
+            ? current.filter(v => v !== label)
+            : [...current, label];
+          renderControls();
+          updateOutputs();
+        });
+        qGrid.appendChild(btn);
+      });
 
-  // Quick-pick chips
-  const chipWrap = document.createElement("div");
-  chipWrap.className = "smallGrid";
+      wrap.appendChild(qGrid);
 
-  PROBLEM_LOCATION_QUICK.forEach(txt => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "chip";
-    b.textContent = txt;
-    b.addEventListener("click", () => addProblemLocationToken(txt));
-    chipWrap.appendChild(b);
-  });
+      const label = document.createElement("label");
+      label.textContent = "Location of the Problem (Free Text)";
+      wrap.appendChild(label);
 
-  wrap.appendChild(chipWrap);
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "e.g., rear storage, stairwell, room off hallway…";
+      input.value = state.problemLocationText || "";
+      input.addEventListener("input", (e) => {
+        state.problemLocationText = e.target.value;
+        updateOutputs();
+      });
+      wrap.appendChild(input);
+    }
 
-  // Free text input
-  const input = document.createElement("input");
-  input.id = "problemLocationInput";
-  input.type = "text";
-  input.placeholder = "e.g., 2nd floor / roof line / rear storage…";
-  input.value = state.problemLocationText || "";
-  input.addEventListener("input", (e) => {
-    state.problemLocationText = e.target.value;
-    updateOutputs();
-  });
-  wrap.appendChild(input);
-}
+    // IAP Location Other
+    if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iapLocation.includes("other")) {
+      const label = document.createElement("label");
+      label.textContent = "IAP Location (Other)";
+      wrap.appendChild(label);
 
-
-/* 🔹 NEW: IAP “Other” location free-text */
-if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iapLocation.includes("other")) {
-  const label = document.createElement("label");
-  label.textContent = "IAP Location (Other)";
-  wrap.appendChild(label);
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = "e.g., interior stairwell, basement, roof division…";
-  input.value = state.iapLocationOther || "";
-  input.addEventListener("input", (e) => {
-    state.iapLocationOther = e.target.value;
-    updateOutputs();
-  });
-  wrap.appendChild(input);
-}
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "e.g., interior stairwell, basement, roof division…";
+      input.value = state.iapLocationOther || "";
+      input.addEventListener("input", (e) => {
+        state.iapLocationOther = e.target.value;
+        updateOutputs();
+      });
+      wrap.appendChild(input);
+    }
 
     parentEl.appendChild(wrap);
   }
@@ -647,81 +598,174 @@ if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iap
     parentEl.appendChild(block);
   }
 
+  // ------- Follow-up rendering helpers -------
+  function renderTwoButtonSingle(parentEl, titleText, key, leftLabel, rightLabel){
+    const title = document.createElement("div");
+    title.style.margin = "12px 0 10px 0";
+    title.innerHTML = `<b>${titleText}</b>`;
+    parentEl.appendChild(title);
+
+    const row = document.createElement("div");
+    row.className = "twoBtnRow";
+
+    [leftLabel, rightLabel].forEach(v => {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.dataset.fkey = key;
+      btn.dataset.fvalue = v;
+      btn.textContent = v;
+      btn.addEventListener("click", () => {
+        fstate[key] = v;
+        refreshSelectedUI();
+        renderControls();
+        updateOutputs();
+      });
+      row.appendChild(btn);
+    });
+
+    parentEl.appendChild(row);
+  }
+
+  function renderFollowMultiGroup(parentEl, titleText, key, options, otherKey){
+    const title = document.createElement("div");
+    title.style.margin = "12px 0 10px 0";
+    title.innerHTML = `<b>${titleText}</b>`;
+    parentEl.appendChild(title);
+
+    const grid = document.createElement("div");
+    grid.className = "grid";
+
+    options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.dataset.fkey = key;
+      btn.dataset.fvalue = opt.value;
+      btn.textContent = opt.label;
+
+      btn.addEventListener("click", () => onFollowChoice(key, "multi", opt.value));
+      grid.appendChild(btn);
+    });
+
+    parentEl.appendChild(grid);
+
+    // other text input if "other" selected
+    if (otherKey && Array.isArray(fstate[key]) && fstate[key].includes("other")) {
+      const lab = document.createElement("label");
+      lab.textContent = "Other";
+      parentEl.appendChild(lab);
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "Type other location…";
+      input.value = fstate[otherKey] || "";
+      input.addEventListener("input", (e) => {
+        fstate[otherKey] = e.target.value;
+        updateOutputs();
+      });
+      parentEl.appendChild(input);
+    }
+  }
+
   function renderFollowBlock(parentEl){
     const block = document.createElement("div");
     block.className = "block follow";
     block.innerHTML = `<h2>Follow Up Report</h2>`;
 
-    // Results of the 360 buttons
-    const group = FOLLOW[0];
-
+    // 360 (completed / not completed)
     const title = document.createElement("div");
     title.style.margin = "0 0 10px 0";
-    title.innerHTML = `<b>${group.title}</b>`;
+    title.innerHTML = `<b>Results of the 360</b>`;
     block.appendChild(title);
 
     const grid = document.createElement("div");
     grid.className = "grid";
-    group.options.forEach(opt => {
+    ["Completed","Not completed"].forEach(v => {
       const btn = document.createElement("button");
       btn.className = "choice";
-      btn.dataset.fkey = group.key;
-      btn.dataset.fvalue = opt.value;
-      btn.textContent = opt.label;
-      btn.addEventListener("click", () => onFollowChoice(group, opt.value));
+      btn.dataset.fkey = "r360";
+      btn.dataset.fvalue = v;
+      btn.textContent = v;
+      btn.addEventListener("click", () => {
+        fstate.r360 = v;
+        refreshSelectedUI();
+        updateOutputs();
+      });
       grid.appendChild(btn);
     });
     block.appendChild(grid);
 
-    // Additional information (always available)
-    const addLabel = document.createElement("label");
-    addLabel.textContent = "Additional information";
-    block.appendChild(addLabel);
+    // Safety concerns: two buttons side-by-side
+    renderTwoButtonSingle(block, "Immediate safety concerns", "safetyMode", "Safety concerns", "None noted");
 
-    const addInput = document.createElement("input");
-    addInput.type = "text";
-    addInput.placeholder = "Optional notes…";
-    addInput.value = fstate.additional || "";
-    addInput.addEventListener("input", (e) => {
-      fstate.additional = e.target.value;
-      updateOutputs();
-    });
-    block.appendChild(addInput);
+    // If safety concerns selected, show free-text box
+    if ((fstate.safetyMode || "") === "Safety concerns"){
+      const lab = document.createElement("label");
+      lab.textContent = "Safety concerns details";
+      block.appendChild(lab);
 
-    // Immediate safety concerns (bold label)
-    const safLabel = document.createElement("span");
-    safLabel.className = "boldLabel";
-    safLabel.style.margin ="12px 0 10px 0";
-    safLabel.textContent = "Immediate safety concerns";
-    block.appendChild(safLabel);
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "e.g., power lines down, propane, unstable wall…";
+      input.value = fstate.safetyText || "";
+      input.addEventListener("input", (e) => {
+        fstate.safetyText = e.target.value;
+        updateOutputs();
+      });
+      block.appendChild(input);
+    }
 
-    const safInput = document.createElement("input");
-    safInput.type = "text";
-    safInput.placeholder = "e.g., power lines down, propane, unstable wall…";
-    safInput.value = fstate.safety || "";
-    safInput.addEventListener("input", (e) => {
-      fstate.safety = e.target.value;
-      updateOutputs();
-    });
-    block.appendChild(safInput);
+    // Change IAP: two buttons side-by-side
+    renderTwoButtonSingle(block, "Change IAP", "changeIap", "Yes", "No");
 
-    // Confirm Strategy / Change IAP (buttons)
-    const confirmGroup = CONFIG.find(g => g.key === "confirmStrategy");
+    // If Change IAP = Yes, show new IAP picker (mirrors size-up IAP)
+    if ((fstate.changeIap || "") === "Yes"){
+      const divider = document.createElement("div");
+      divider.style.margin = "12px 0 0 0";
+      divider.innerHTML = `<b>New Initial Action Plan</b>`;
+      block.appendChild(divider);
+
+      // tasks
+      renderFollowMultiGroup(
+        block,
+        "Task (multi)",
+        "newIapTasks",
+        CONFIG.find(g => g.key==="iapTasks").options
+      );
+
+      // location
+      renderFollowMultiGroup(
+        block,
+        "IAP Location (multi)",
+        "newIapLocation",
+        CONFIG.find(g => g.key==="iapLocation").options,
+        "newIapLocationOther"
+      );
+
+      // objectives
+      renderFollowMultiGroup(
+        block,
+        "Objective (multi)",
+        "newIapObjectives",
+        CONFIG.find(g => g.key==="iapObjectives").options
+      );
+    }
+
+    // Confirm Strategy stays the same
     const cTitle = document.createElement("div");
     cTitle.style.margin = "12px 0 10px 0";
-    cTitle.innerHTML = `<b>${confirmGroup.title}</b>`;
+    cTitle.innerHTML = `<b>Confirm Strategy</b>`;
     block.appendChild(cTitle);
 
     const cGrid = document.createElement("div");
     cGrid.className = "grid";
-    confirmGroup.options.forEach(opt => {
+    ["Offensive","Defensive"].forEach(v => {
       const btn = document.createElement("button");
       btn.className = "choice";
       btn.dataset.fkey = "confirmStrategy";
-      btn.dataset.fvalue = opt.value;
-      btn.textContent = opt.label;
+      btn.dataset.fvalue = v;
+      btn.textContent = v;
       btn.addEventListener("click", () => {
-        fstate.confirmStrategy = opt.value;
+        fstate.confirmStrategy = v;
         refreshSelectedUI();
         updateOutputs();
       });
@@ -729,42 +773,25 @@ if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iap
     });
     block.appendChild(cGrid);
 
-    // Confirm strategy free text
-    const cTextLabel = document.createElement("label");
-    cTextLabel.textContent = "Notes";
-    block.appendChild(cTextLabel);
-
-    const cTextInput = document.createElement("input");
-    cTextInput.type = "text";
-    cTextInput.placeholder = "Optional notes…";
-    cTextInput.value = fstate.confirmNotes || "";
-    cTextInput.addEventListener("input", (e) => {
-      fstate.confirmNotes = e.target.value;
-      updateOutputs();
-    });
-    block.appendChild(cTextInput);
-
     // Resource determination
-    const resGroup = CONFIG.find(g => g.key === "resourceDetermination");
     const rTitle = document.createElement("div");
     rTitle.style.margin = "12px 0 10px 0";
-    rTitle.innerHTML = `<b>${resGroup.title}</b>`;
+    rTitle.innerHTML = `<b>Resource determination</b>`;
     block.appendChild(rTitle);
 
     const rGrid = document.createElement("div");
     rGrid.className = "grid";
-    resGroup.options.forEach(opt => {
+    ["Recall units","2nd alarm"].forEach(v => {
       const btn = document.createElement("button");
       btn.className = "choice";
       btn.dataset.fkey = "resourceDetermination";
-      btn.dataset.fvalue = opt.value;
-      btn.textContent = opt.label;
+      btn.dataset.fvalue = v;
+      btn.textContent = v;
       btn.addEventListener("click", () => {
-      fstate.resourceDetermination = opt.value;
-      refreshSelectedUI();
-      updateOutputs();
-        });
-
+        fstate.resourceDetermination = v;
+        refreshSelectedUI();
+        updateOutputs();
+      });
       rGrid.appendChild(btn);
     });
     block.appendChild(rGrid);
@@ -775,10 +802,9 @@ if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iap
   function renderControls(){
     controlsEl.innerHTML = "";
 
-    // 1) Batt + Apparatus dropdowns side-by-side
     renderDropdownBlock(controlsEl);
 
-    // 2) IRR (two columns)
+    // IRR
     const irr = document.createElement("div");
     irr.className = "irrWrap";
     irr.innerHTML = `<div class="irrTitle">IRR</div>`;
@@ -803,7 +829,7 @@ if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iap
     irr.appendChild(cols);
     controlsEl.appendChild(irr);
 
-    // 3) IAP (left) and Strategy+Command (right) in same box
+    // IAP + Strategy/Command
     const row = document.createElement("div");
     row.className = "miniRow";
 
@@ -818,9 +844,6 @@ if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iap
     cmd.className = "block cmd";
     cmd.innerHTML = `<h2>Strategy / Command</h2>`;
 
-    // Strategy buttons (use existing CONFIG key "strategy"? We removed it.
-    // We'll use confirmStrategy for strategy selection in size-up too? No: size-up needs Strategy in output.
-    // We'll store size-up strategy in state.strategy, with buttons here:
     const stratLabel = document.createElement("div");
     stratLabel.style.margin = "0 0 10px 0";
     stratLabel.innerHTML = `<b>Strategy</b>`;
@@ -828,22 +851,19 @@ if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iap
 
     const stratGrid = document.createElement("div");
     stratGrid.className = "grid";
-   ["Offensive", "Defensive"].forEach(v => {
+    ["Offensive","Defensive"].forEach(v => {
       const btn = document.createElement("button");
       btn.className = "choice";
       btn.dataset.key = "strategy";
       btn.dataset.value = v;
       btn.textContent = v;
-    
       btn.addEventListener("click", () => {
         state.strategy = v;
         refreshSelectedUI();
         updateOutputs();
       });
-    
       stratGrid.appendChild(btn);
     });
-
     cmd.appendChild(stratGrid);
 
     const cmdLabel = document.createElement("div");
@@ -866,19 +886,19 @@ if (group.key === "iapLocation" && Array.isArray(state.iapLocation) && state.iap
     row.appendChild(cmd);
     controlsEl.appendChild(row);
 
-  // Follow-up controls go in their own bordered card (NOT inside #controls)
-const followCard = document.getElementById("followControlsCard");
-if (followCard) {
-  followCard.innerHTML = "";
-  renderFollowBlock(followCard);
-}
+    // Follow-up controls
+    const followCard = document.getElementById("followControlsCard");
+    if (followCard) {
+      followCard.innerHTML = "";
+      renderFollowBlock(followCard);
+    }
 
     refreshSelectedUI();
   }
 
   function refreshSelectedUI(){
-    // size-up buttons
     document.querySelectorAll("button.choice").forEach(btn => {
+      // size-up
       if (btn.dataset.key) {
         const key = btn.dataset.key;
         const value = btn.dataset.value;
@@ -894,101 +914,54 @@ if (followCard) {
           : Array.isArray(current) && current.includes(value);
         btn.classList.toggle("selected", selected);
       }
-      // follow-up buttons
+
+      // follow-up
       if (btn.dataset.fkey) {
         const k = btn.dataset.fkey;
         const v = btn.dataset.fvalue;
-        btn.classList.toggle("selected", (fstate[k] || "") === v);
+
+        // follow-up multi groups
+        const current = fstate[k];
+        const isMulti = Array.isArray(current);
+        const selected = isMulti ? current.includes(v) : (current || "") === v;
+
+        btn.classList.toggle("selected", selected);
       }
+    });
+
+    // problem quick buttons selection
+    const q = Array.isArray(state.problemLocQuick) ? state.problemLocQuick : [];
+    document.querySelectorAll(".grid.small button.choice.small").forEach(b => {
+      b.classList.toggle("selected", q.includes(b.textContent));
     });
   }
 
-  function optionPhrase(groupKey, value){
-    const group = CONFIG.find(g => g.key === groupKey);
-    if (!group) return "";
-    return (group.options.find(o => o.value === value)?.phrase || "").trim();
-  }
-  function singlePhrase(key){
-    const val = state[key];
-    if (!val) return "";
-    return optionPhrase(key, val);
-  }
-  function multiList(key){
-    const arr = Array.isArray(state[key]) ? state[key] : [];
-    return arr.filter(Boolean);
-  }
-  function niceSidesDisplay(sidesArr){
-    return sidesArr.map(s => s.toLowerCase()).join(" ");
-  }
-  function mapIapLocation(val){
-  if (!val) return "";
-  const lower = String(val).toLowerCase();
-
-  // Sides → add "side"
-  if (["alpha","bravo","charlie","delta"].includes(lower)) {
-    return `${lower} side`;
-  }
-
-  // Floors → no "side"
-  if (lower.includes("floor")) {
-    return lower; // "1st floor", "2nd floor", etc.
-  }
-
-  // Fallback
-  return lower;
-}
-function buildIapLocationPhrase(iapLocArr, otherText){
-  const arr = Array.isArray(iapLocArr) ? iapLocArr : [];
-  const parts = [];
-
-  for (const v of arr) {
-    if (v === "other") continue;
-    parts.push(mapIapLocation(v)); // alpha -> "alpha side", 1st Floor -> "1st floor"
-  }
-
-  const other = (otherText || "").trim();
-  if (arr.includes("other") && other) parts.push(other.toLowerCase());
-
-  // remove duplicates (just in case)
-  const uniq = [...new Set(parts)].filter(Boolean);
-
-  return uniq.join(", ");
-}
-function formatBattalion(val){
-  const v = (val || "").trim().toUpperCase();
-  if (v === "BC1") return "Battalion 1";
-  if (v === "BC2") return "Battalion 2";
-  return ""; // if blank or anything else
-}
-
-function normalizeCommandName(raw){
-  let s = (raw || "").trim();
-  if (!s) return "";
-
-  // If they already ended with "Command" (or "command."), keep it
-  if (/command\.?$/i.test(s)) return s.replace(/\.*$/,"");
-
-  // Otherwise append " Command"
-  return `${s} Command`;
-}
-
   function updateOutputs(){
     // ---------- SIZE-UP ----------
-    const battalion = formatBattalion(state.battalion);
+    const battalionCode = (state.battalion || "").trim();
+    const battalion = battalionDisplay(battalionCode);
     const apparatus = (state.apparatus || "").trim();
 
     const bSize = (state.buildingSize || "").trim();
     const bHeight = singlePhrase("height");
+
     let occ = "";
     if (state.occupancy === "other") occ = (state.occupancyOther || "").trim();
     else if (state.occupancy) occ = optionPhrase("occupancy", state.occupancy);
 
     const condition = singlePhrase("conditions");
+
     const sides = multiList("problemSides");
     const sidesText = sides.length ? niceSidesDisplay(sides) : "";
+
+    const quick = Array.isArray(state.problemLocQuick) ? state.problemLocQuick : [];
+    const quickText = quick.length ? quick.map(x => x.toLowerCase()).join(", ") : "";
+
     const locFree = (state.problemLocationText || "").trim();
+    const locCombined = [quickText, locFree].filter(Boolean).join(", ").trim();
 
     const tasks = multiList("iapTasks").map(v => optionPhrase("iapTasks", v)).filter(Boolean);
+
     const iapLocPhrase = buildIapLocationPhrase(state.iapLocation, state.iapLocationOther);
 
     const objectives = multiList("iapObjectives").map(v => optionPhrase("iapObjectives", v)).filter(Boolean);
@@ -1000,10 +973,10 @@ function normalizeCommandName(raw){
     const buildingPhrase = buildingParts.length ? buildingParts.join(" ") : "a structure";
 
     let probPhrase = "";
-    if (sidesText && !locFree) {
-      probPhrase = `${sidesText} side`;      // alpha side / alpha bravo side
+    if (sidesText && !locCombined) {
+      probPhrase = `${sidesText} side`;
     } else {
-      probPhrase = [sidesText, locFree].filter(Boolean).join(" ").trim();
+      probPhrase = [sidesText ? `${sidesText} side` : "", locCombined].filter(Boolean).join(" ").trim();
     }
 
     const taskPhrase = tasks.length ? tasks.join(", ") : "";
@@ -1016,7 +989,7 @@ function normalizeCommandName(raw){
       `${condition ? ", with " + condition : ""}` +
       `${probPhrase ? " on the " + probPhrase : ""}.`;
 
-   const line2 =
+    const line2 =
       `${apparatus ? apparatus + " " : ""}` +
       `${taskPhrase ? "will be " + taskPhrase : "will be operating"}` +
       `${iapLocPhrase ? " on the " + iapLocPhrase : ""}` +
@@ -1028,60 +1001,69 @@ function normalizeCommandName(raw){
 
     outputBox.textContent = [line1, line2, line3].join("\n\n");
 
+    // ---------- FOLLOW-UP ----------
+    const fBattalion = battalionDisplay(state.battalion);
+    const fCommand = normalizeCommandName(state.commandText);
 
-      // 4) Follow Up Report (after generated size-up in the page layout, but controls are here still)
-    // You asked: "generated size up, then start the next section with follow up report."
-    // Controls are above outputs; to match your request visually, we keep follow-up controls below this line:
-  
-    
-    // add follow-up controls once per render
-        
-  
-    // ---------- FOLLOW-UP REPORT ----------
     const r360 = (fstate.r360 || "").trim();
-    const additional = (fstate.additional || "").trim();
-    const safety = (fstate.safety || "").trim();
-    const confirmStrat = (fstate.confirmStrategy || "").trim();
-    const confirmNotes = (fstate.confirmNotes || "").trim();
+    const safetyMode = (fstate.safetyMode || "").trim();
+    const safetyText = (fstate.safetyText || "").trim();
+    const changeIap = (fstate.changeIap || "").trim();
+    const confirmStrat = ((fstate.confirmStrategy || state.strategy || "Offensive") + "").trim().toLowerCase();
     const resource = (fstate.resourceDetermination || "").trim();
 
-    const lines = [];
-    if (r360) lines.push(`Results of the 360: ${r360}.`);
-    if (additional) lines.push(`Additional information: ${additional}${additional.endsWith(".") ? "" : "."}`);
-    if (safety) lines.push(`Immediate safety concerns: ${safety}${safety.endsWith(".") ? "" : "."}`);
-    if (confirmStrat) lines.push(`Confirm Strategy/Change IAP: ${confirmStrat}${confirmNotes ? " — " + confirmNotes : ""}.`);
-    if (resource) lines.push(`Resource determination: ${resource}.`);
+    // build new IAP phrase (if change IAP = Yes)
+    let newIapLine = "";
+    if (changeIap === "Yes") {
+      const ntasks = (Array.isArray(fstate.newIapTasks) ? fstate.newIapTasks : [])
+        .map(v => optionPhrase("iapTasks", v)).filter(Boolean);
 
-    if (!lines.length) lines.push("Follow-up report: (make selections above).");
-    followOutputBox.textContent = lines.join("\n");
-  }
+      const nloc = buildIapLocationPhrase(fstate.newIapLocation, fstate.newIapLocationOther);
 
-  async function copyFrom(el, msg){
-    const text = el.textContent || "";
-    try{
-      await navigator.clipboard.writeText(text);
-      alert(msg);
-    }catch{
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      alert(msg);
+      const nobj = (Array.isArray(fstate.newIapObjectives) ? fstate.newIapObjectives : [])
+        .map(v => optionPhrase("iapObjectives", v)).filter(Boolean);
+
+      const t = ntasks.length ? ntasks.join(", ") : "operating";
+      const o = nobj.length ? ` for ${nobj.join(", ")}` : "";
+      const l = nloc ? ` on the ${nloc}` : "";
+
+      // "read just like the IAP from generate size up"
+      newIapLine = `${state.apparatus ? state.apparatus + " " : ""}will be ${t}${l}${o}.`;
     }
+
+    const parts = [];
+
+    // lead-in
+    const lead =
+      `${fBattalion ? fBattalion + " " : ""}` +
+      `${fCommand ? "From " + fCommand + ", " : ""}` +
+      `${r360 ? "360 was " + r360 : ""}`.trim();
+
+    if (lead) parts.push(lead + (lead.endsWith(".") ? "" : ","));
+
+    // safety sentence
+    if (safetyMode === "None noted") {
+      parts.push("None noted, no safety concerns,");
+    } else if (safetyMode === "Safety concerns") {
+      parts.push(`${safetyText ? safetyText : "Safety concerns noted"},`);
+    }
+
+    // change IAP sentence (only if Yes)
+    if (newIapLine) parts.push(newIapLine.endsWith(".") ? newIapLine : (newIapLine + "."));
+
+    // remaining strategy
+    parts.push(`We are remaining in the ${confirmStrat} strategy.`);
+
+    // resource
+    if (resource === "Recall units") parts.push("Recall units.");
+    if (resource === "2nd alarm") parts.push("Give me a 2nd alarm.");
+
+    // cleanup: if nothing selected, show helper text
+    const cleaned = parts.join(" ").replace(/\s+/g," ").trim();
+    followOutputBox.textContent = cleaned || "Follow-up report: (make selections above).";
   }
 
-  function clearSizeup(){
-    // Clear only size-up state
-    const keep = {}; // nothing
-    Object.keys(state).forEach(k => delete state[k]);
-    renderControls();
-    updateOutputs();
-  }
-
-  function clearFollow(){
-    Object.keys(fstate).forEach(k => delete fstate[k]);
+  function init(){
     renderControls();
     updateOutputs();
   }
