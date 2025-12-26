@@ -837,6 +837,24 @@ if (followCard) {
   let s = (raw || "").trim();
   if (!s) return "";
 
+    function mapIapLocation(val){
+  if (!val) return "";
+  const lower = String(val).toLowerCase();
+
+  // Sides → add "side"
+  if (["alpha","bravo","charlie","delta"].includes(lower)) {
+    return `${lower} side`;
+  }
+
+  // Floors → leave as-is (just normalize case)
+  if (lower.includes("floor")) {
+    return lower; // "1st floor", "2nd floor", etc.
+  }
+
+  // Fallback: just return the text
+  return lower;
+}
+
   // If they already ended with "Command" (or "command."), keep it
   if (/command\.?$/i.test(s)) return s.replace(/\.*$/,"");
 
