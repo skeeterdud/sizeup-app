@@ -693,6 +693,22 @@
       grid.appendChild(btn);
     });
     block.appendChild(grid);
+// 360 Findings (only show once a 360 option is selected)
+if ((fstate.r360 || "").trim()) {
+  const fLabel = document.createElement("label");
+  fLabel.textContent = "360 Findings";
+  block.appendChild(fLabel);
+
+  const fInput = document.createElement("input");
+  fInput.type = "text";
+  fInput.placeholder = "e.g., fire located in kitchen; utilities controlled; victim located; exposures…";
+  fInput.value = fstate.r360Findings || "";
+  fInput.addEventListener("input", (e) => {
+    fstate.r360Findings = e.target.value;
+    updateOutputs();
+  });
+  block.appendChild(fInput);
+}
 
     // Safety concerns: two buttons side-by-side
     renderTwoButtonSingle(block, "Immediate safety concerns", "safetyMode", "Safety concerns", "None noted");
