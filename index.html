@@ -879,11 +879,11 @@ if (followCard) {
     const locFree = (state.problemLocationText || "").trim();
 
     const tasks = multiList("iapTasks").map(v => optionPhrase("iapTasks", v)).filter(Boolean);
-    let iapLoc = "";
+    let iapLocPhrase = "";
     if (state.iapLocation === "other") {
-      iapLoc = (state.iapLocationOther || "").trim();
+      iapLocPhrase = (state.iapLocationOther || "").trim();
     } else {
-      iapLoc = singlePhrase("iapLocation");
+      iapLocPhrase = mapIapLocation(state.iapLocation);
     }
 
     const objectives = multiList("iapObjectives").map(v => optionPhrase("iapObjectives", v)).filter(Boolean);
@@ -911,10 +911,10 @@ if (followCard) {
       `${condition ? ", with " + condition : ""}` +
       `${probPhrase ? " on the " + probPhrase : ""}.`;
 
-    const line2 =
+   const line2 =
       `${apparatus ? apparatus + " " : ""}` +
       `${taskPhrase ? "will be " + taskPhrase : "will be operating"}` +
-      `${iapLoc ? " on the " + iapLoc + " side" : ""}` +
+      `${iapLocPhrase ? " on the " + iapLocPhrase : ""}` +
       `${objPhrase ? " for " + objPhrase : ""}.`;
 
     const line3 =
