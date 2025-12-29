@@ -152,7 +152,6 @@
       .grid{grid-template-columns:repeat(2,minmax(0,1fr));}
     }
 
-    /* Smaller quick-buttons grid */
     .grid.small{
       grid-template-columns:repeat(3,minmax(0,1fr));
       gap:8px;
@@ -251,6 +250,19 @@
       display:grid;
       grid-template-columns:1fr 1fr;
       gap:10px;
+      margin-top:12px;
+    }
+
+    .stepLabel{
+      font-size:13px;
+      color:rgba(233,238,252,.8);
+      margin-bottom:6px;
+    }
+
+    .smallNote{
+      font-size:12px;
+      color:rgba(233,238,252,.75);
+      margin-top:4px;
     }
   </style>
 </head>
@@ -258,20 +270,26 @@
 <body>
 <header>
   <h1>MFD Size-Up Builder</h1>
-  <div class="hint">Tap selections → paragraphs update → Copy.</div>
+  <div class="hint">Tap selections → Generate → Copy or Print/PDF.</div>
 </header>
 
 <div class="wrap">
-  <div class="card" id="controls"></div>
+  <!-- Global actions (New / Print) -->
+  <div class="card" id="globalActionsCard"></div>
 
-  <div class="card">
+  <!-- Screen content card (screen 1 and 2 use this) -->
+  <div class="card" id="controlsCard"></div>
+
+  <!-- Size-Up output (shown when generated on Screen 2) -->
+  <div class="card" id="sizeupCard" style="display:none">
     <div class="outputTitle"><b>Generated Size-Up</b></div>
     <div class="output" id="outputBox"></div>
   </div>
 
-  <div class="card" id="followControlsCard"></div>
+  <!-- Follow-up controls + output (Screen 3) -->
+  <div class="card" id="followControlsCard" style="display:none"></div>
 
-  <div class="card">
+  <div class="card" id="followOutputCard" style="display:none">
     <div class="outputTitle"><b>Generated Follow-Up Report</b></div>
     <div class="output" id="followOutputBox"></div>
   </div>
@@ -363,18 +381,37 @@
   // ---------- State ----------
   const state = {};
   const fstate = {};
+  let currentScreen = 1;      // 1 = apparatus, 2 = IRR/IAP, 3 = follow-up
+  let sizeupVisible = false;  // controls visibility of sizeupCard
 
-  const controlsEl = document.getElementById("controls");
+  const controlsCard = document.getElementById("controlsCard");
   const outputBox = document.getElementById("outputBox");
   const followOutputBox = document.getElementById("followOutputBox");
+
+  function goToScreen(n){
+    currentScreen = n;
+    renderScreen();
+    updateOutputs();
+  }
+
+  function clearAll(){
+    for (const k in state) delete state[k];
+    for (const k in fstate) delete fstate[k];
+    sizeupVisible = false;
+    currentScreen = 1;
+    renderScreen();
+    updateOutputs();
+  }
 
   function onChoice(group, value){
     if (group.mode === "single") state[group.key] = value;
     else {
       const current = Array.isArray(state[group.key]) ? state[group.key] : [];
-      state[group.key] = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+      state[group.key] = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
     }
-    renderControls();
+    renderScreen();
     updateOutputs();
   }
 
@@ -383,9 +420,11 @@
       fstate[groupKey] = value;
     } else {
       const current = Array.isArray(fstate[groupKey]) ? fstate[groupKey] : [];
-      fstate[groupKey] = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+      fstate[groupKey] = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
     }
-    renderControls();
+    renderScreen();
     updateOutputs();
   }
 
@@ -394,11 +433,13 @@
     if (!group) return "";
     return (group.options.find(o => o.value === value)?.phrase || "").trim();
   }
+
   function singlePhrase(key){
     const val = state[key];
     if (!val) return "";
     return optionPhrase(key, val);
   }
+
   function multiList(key){
     const arr = Array.isArray(state[key]) ? state[key] : [];
     return arr.filter(Boolean);
@@ -435,28 +476,20 @@
     if (/command\.?$/i.test(s)) return s.replace(/\.*$/,"");
     return `${s} Command`;
   }
-function cleanInlineText(raw){
-  let s = (raw || "").trim();
 
-  // remove leading commas/periods/dashes etc.
-  s = s.replace(/^[,.;:\-\s]+/, "").trim();
+  function cleanInlineText(raw){
+    let s = (raw || "").trim();
+    s = s.replace(/^[,.;:\-\s]+/, "").trim();  // leading punctuation
+    s = s.replace(/\s+/g, " ");                // collapse spaces
+    if (s.length) s = s.charAt(0).toUpperCase() + s.slice(1);
+    return s;
+  }
 
-  // collapse repeated spaces
-  s = s.replace(/\s+/g, " ");
-
-  // capitalize first letter
-  if (s.length) s = s.charAt(0).toUpperCase() + s.slice(1);
-
-  return s;
-}
-
-// If you want findings to always end with a period, use this.
-// If you *don't* want auto periods, skip this function and don't call it.
-function ensurePeriod(s){
-  const t = (s || "").trim();
-  if (!t) return "";
-  return /[.!?]$/.test(t) ? t : (t + ".");
-}
+  function ensurePeriod(s){
+    const t = (s || "").trim();
+    if (!t) return "";
+    return /[.!?]$/.test(t) ? t : (t + ".");
+  }
 
   function battalionDisplay(code){
     const c = (code || "").trim();
@@ -465,6 +498,8 @@ function ensurePeriod(s){
     return "";
   }
 
+  // ---------- UI helpers ----------
+
   function renderButtonGroup(group, parentEl){
     const wrap = document.createElement("div");
     wrap.style.marginBottom = "12px";
@@ -472,7 +507,7 @@ function ensurePeriod(s){
     const title = document.createElement("div");
     title.style.margin = "0 0 10px 0";
     title.innerHTML = `<b>${group.title}</b>`;
-    parentEl.appendChild(title);
+    wrap.appendChild(title);
 
     const grid = document.createElement("div");
     grid.className = "grid";
@@ -524,7 +559,7 @@ function ensurePeriod(s){
           state.problemLocQuick = current.includes(label)
             ? current.filter(v => v !== label)
             : [...current, label];
-          renderControls();
+          renderScreen();
           updateOutputs();
         });
         qGrid.appendChild(btn);
@@ -638,8 +673,7 @@ function ensurePeriod(s){
       btn.textContent = v;
       btn.addEventListener("click", () => {
         fstate[key] = v;
-        refreshSelectedUI();
-        renderControls();
+        renderScreen();
         updateOutputs();
       });
       row.appendChild(btn);
@@ -670,7 +704,6 @@ function ensurePeriod(s){
 
     parentEl.appendChild(grid);
 
-    // other text input if "other" selected
     if (otherKey && Array.isArray(fstate[key]) && fstate[key].includes("other")) {
       const lab = document.createElement("label");
       lab.textContent = "Other";
@@ -693,22 +726,32 @@ function ensurePeriod(s){
     block.className = "block follow";
     block.innerHTML = `<h2>Follow Up Report</h2>`;
 
-    ["Completed","Not completed"].forEach(v => {
-  const btn = document.createElement("button");
-  btn.className = "choice";
-  btn.dataset.fkey = "r360";
-  btn.dataset.fvalue = v;
-  btn.textContent = v;
-  btn.addEventListener("click", () => {
-    fstate.r360 = v;
-    refreshSelectedUI();
-    renderControls();   // 🔹 re-render follow-up block so the input appears
-    updateOutputs();
-  });
-  grid.appendChild(btn);
-});
+    // 360 Completed / Not completed
+    const rTitle = document.createElement("div");
+    rTitle.style.margin = "12px 0 10px 0";
+    rTitle.innerHTML = `<b>360</b>`;
+    block.appendChild(rTitle);
 
-    // 360 Findings (only show once a 360 option is selected)
+    const rRow = document.createElement("div");
+    rRow.className = "twoBtnRow";
+
+    ["Completed","Not completed"].forEach(v => {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.dataset.fkey = "r360";
+      btn.dataset.fvalue = v;
+      btn.textContent = v;
+      btn.addEventListener("click", () => {
+        fstate.r360 = v;
+        renderScreen();
+        updateOutputs();
+      });
+      rRow.appendChild(btn);
+    });
+
+    block.appendChild(rRow);
+
+    // 360 Findings
     if ((fstate.r360 || "").trim()) {
       const fLabel = document.createElement("label");
       fLabel.textContent = "360 Findings";
@@ -719,18 +762,15 @@ function ensurePeriod(s){
       fInput.placeholder = "e.g., fire located in kitchen; utilities controlled; victim located; exposures…";
       fInput.value = fstate.r360Findings || "";
       fInput.addEventListener("input", (e) => {
-        // store raw while typing
         fstate.r360Findings = e.target.value;
         updateOutputs();
       });
-
       block.appendChild(fInput);
     }
 
-    // Safety concerns: two buttons side-by-side
+    // Safety concerns
     renderTwoButtonSingle(block, "Immediate safety concerns", "safetyMode", "Safety concerns", "None noted");
 
-    // If safety concerns selected, show free-text box
     if ((fstate.safetyMode || "") === "Safety concerns"){
       const lab = document.createElement("label");
       lab.textContent = "Safety concerns details";
@@ -747,10 +787,9 @@ function ensurePeriod(s){
       block.appendChild(input);
     }
 
-    // Change IAP: two buttons side-by-side
+    // Change IAP
     renderTwoButtonSingle(block, "Change IAP", "changeIap", "Yes", "No");
 
-    // If Change IAP = Yes, show new IAP picker (mirrors size-up IAP)
     if ((fstate.changeIap || "") === "Yes"){
       const divider = document.createElement("div");
       divider.style.margin = "12px 0 0 0";
@@ -783,7 +822,7 @@ function ensurePeriod(s){
       );
     }
 
-    // Confirm Strategy stays the same
+    // Confirm Strategy
     const cTitle = document.createElement("div");
     cTitle.style.margin = "12px 0 10px 0";
     cTitle.innerHTML = `<b>Confirm Strategy</b>`;
@@ -799,7 +838,6 @@ function ensurePeriod(s){
       btn.textContent = v;
       btn.addEventListener("click", () => {
         fstate.confirmStrategy = v;
-        refreshSelectedUI();
         updateOutputs();
       });
       cGrid.appendChild(btn);
@@ -807,13 +845,13 @@ function ensurePeriod(s){
     block.appendChild(cGrid);
 
     // Resource determination
-    const rTitle = document.createElement("div");
-    rTitle.style.margin = "12px 0 10px 0";
-    rTitle.innerHTML = `<b>Resource determination</b>`;
-    block.appendChild(rTitle);
+    const r2Title = document.createElement("div");
+    r2Title.style.margin = "12px 0 10px 0";
+    r2Title.innerHTML = `<b>Resource determination</b>`;
+    block.appendChild(r2Title);
 
-    const rGrid = document.createElement("div");
-    rGrid.className = "grid";
+    const r2Grid = document.createElement("div");
+    r2Grid.className = "grid";
     ["Recall units","2nd alarm"].forEach(v => {
       const btn = document.createElement("button");
       btn.className = "choice";
@@ -822,108 +860,239 @@ function ensurePeriod(s){
       btn.textContent = v;
       btn.addEventListener("click", () => {
         fstate.resourceDetermination = v;
-        refreshSelectedUI();
         updateOutputs();
       });
-      rGrid.appendChild(btn);
+      r2Grid.appendChild(btn);
     });
-    block.appendChild(rGrid);
+    block.appendChild(r2Grid);
+
+    // Nav row: Back to IRR/IAP
+    const navRow = document.createElement("div");
+    navRow.className = "twoBtnRow";
+
+    const backBtn = document.createElement("button");
+    backBtn.className = "choice";
+    backBtn.textContent = "Back: IRR / IAP";
+    backBtn.addEventListener("click", () => goToScreen(2));
+    navRow.appendChild(backBtn);
+
+    const spacer = document.createElement("button");
+    spacer.className = "choice";
+    spacer.textContent = " ";
+    spacer.style.visibility = "hidden";
+    navRow.appendChild(spacer);
+
+    block.appendChild(navRow);
 
     parentEl.appendChild(block);
   }
 
-  function renderControls(){
-    controlsEl.innerHTML = "";
+  // ---------- Screen rendering ----------
 
-    renderDropdownBlock(controlsEl);
+  function renderGlobalActions(){
+    const card = document.getElementById("globalActionsCard");
+    card.innerHTML = "";
 
-    // IRR
-    const irr = document.createElement("div");
-    irr.className = "irrWrap";
-    irr.innerHTML = `<div class="irrTitle">IRR</div>`;
-    const cols = document.createElement("div");
-    cols.className = "twoCol";
+    const step = document.createElement("div");
+    step.className = "stepLabel";
+    step.textContent =
+      currentScreen === 1 ? "Step 1 of 3 – Pick your apparatus" :
+      currentScreen === 2 ? "Step 2 of 3 – IRR & Initial Action Plan" :
+                            "Step 3 of 3 – Follow-Up Report";
+    card.appendChild(step);
 
-    const building = document.createElement("div");
-    building.className = "block building";
-    building.innerHTML = `<h2>Building Description</h2>`;
-    renderButtonGroup(CONFIG.find(g => g.key==="buildingSize"), building);
-    renderButtonGroup(CONFIG.find(g => g.key==="height"), building);
-    renderButtonGroup(CONFIG.find(g => g.key==="occupancy"), building);
-
-    const problem = document.createElement("div");
-    problem.className = "block problem";
-    problem.innerHTML = `<h2>Problem Description</h2>`;
-    renderButtonGroup(CONFIG.find(g => g.key==="conditions"), problem);
-    renderButtonGroup(CONFIG.find(g => g.key==="problemSides"), problem);
-
-    cols.appendChild(building);
-    cols.appendChild(problem);
-    irr.appendChild(cols);
-    controlsEl.appendChild(irr);
-
-    // IAP + Strategy/Command
     const row = document.createElement("div");
-    row.className = "miniRow";
+    row.className = "twoBtnRow";
 
-    const iap = document.createElement("div");
-    iap.className = "block iap";
-    iap.innerHTML = `<h2>Initial Action Plan</h2>`;
-    renderButtonGroup(CONFIG.find(g => g.key==="iapTasks"), iap);
-    renderButtonGroup(CONFIG.find(g => g.key==="iapLocation"), iap);
-    renderButtonGroup(CONFIG.find(g => g.key==="iapObjectives"), iap);
+    const newBtn = document.createElement("button");
+    newBtn.className = "choice";
+    newBtn.textContent = "New Size-Up";
+    newBtn.addEventListener("click", clearAll);
+    row.appendChild(newBtn);
 
-    const cmd = document.createElement("div");
-    cmd.className = "block cmd";
-    cmd.innerHTML = `<h2>Strategy / Command</h2>`;
+    const printBtn = document.createElement("button");
+    printBtn.className = "choice";
+    printBtn.textContent = "Print / PDF";
+    printBtn.addEventListener("click", () => window.print());
+    row.appendChild(printBtn);
 
-    const stratLabel = document.createElement("div");
-    stratLabel.style.margin = "0 0 10px 0";
-    stratLabel.innerHTML = `<b>Strategy</b>`;
-    cmd.appendChild(stratLabel);
+    card.appendChild(row);
 
-    const stratGrid = document.createElement("div");
-    stratGrid.className = "grid";
-    ["Offensive","Defensive"].forEach(v => {
-      const btn = document.createElement("button");
-      btn.className = "choice";
-      btn.dataset.key = "strategy";
-      btn.dataset.value = v;
-      btn.textContent = v;
-      btn.addEventListener("click", () => {
-        state.strategy = v;
-        refreshSelectedUI();
+    const note = document.createElement("div");
+    note.className = "smallNote";
+    note.textContent = "Use New Size-Up to reset all fields. Use Print / PDF to send this to a printer or save as PDF.";
+    card.appendChild(note);
+  }
+
+  function renderScreen(){
+    renderGlobalActions();
+
+    const sizeupCard = document.getElementById("sizeupCard");
+    const followControlsCard = document.getElementById("followControlsCard");
+    const followOutputCard = document.getElementById("followOutputCard");
+
+    // Reset visibility; we'll turn on what we need
+    controlsCard.style.display = "none";
+    sizeupCard.style.display = "none";
+    followControlsCard.style.display = "none";
+    followOutputCard.style.display = "none";
+
+    if (currentScreen === 1){
+      // Screen 1: Apparatus only
+      controlsCard.style.display = "block";
+      controlsCard.innerHTML = "";
+
+      const title = document.createElement("div");
+      title.className = "outputTitle";
+      title.innerHTML = "<b>Pick your apparatus</b>";
+      controlsCard.appendChild(title);
+
+      renderDropdownBlock(controlsCard);
+
+      const nav = document.createElement("div");
+      nav.className = "twoBtnRow";
+
+      const spacer = document.createElement("button");
+      spacer.className = "choice";
+      spacer.textContent = " ";
+      spacer.style.visibility = "hidden";
+      nav.appendChild(spacer);
+
+      const nextBtn = document.createElement("button");
+      nextBtn.className = "choice";
+      nextBtn.textContent = "Next: IRR / IAP";
+      nextBtn.addEventListener("click", () => goToScreen(2));
+      nav.appendChild(nextBtn);
+
+      controlsCard.appendChild(nav);
+
+    } else if (currentScreen === 2){
+      // Screen 2: IRR + IAP/Strategy/Command
+      controlsCard.style.display = "block";
+      controlsCard.innerHTML = "";
+
+      const title = document.createElement("div");
+      title.className = "outputTitle";
+      title.innerHTML = "<b>IRR & Initial Action Plan</b>";
+      controlsCard.appendChild(title);
+
+      // IRR
+      const irr = document.createElement("div");
+      irr.className = "irrWrap";
+      irr.innerHTML = `<div class="irrTitle">IRR</div>`;
+      const cols = document.createElement("div");
+      cols.className = "twoCol";
+
+      const building = document.createElement("div");
+      building.className = "block building";
+      building.innerHTML = `<h2>Building Description</h2>`;
+      renderButtonGroup(CONFIG.find(g => g.key==="buildingSize"), building);
+      renderButtonGroup(CONFIG.find(g => g.key==="height"), building);
+      renderButtonGroup(CONFIG.find(g => g.key==="occupancy"), building);
+
+      const problem = document.createElement("div");
+      problem.className = "block problem";
+      problem.innerHTML = `<h2>Problem Description</h2>`;
+      renderButtonGroup(CONFIG.find(g => g.key==="conditions"), problem);
+      renderButtonGroup(CONFIG.find(g => g.key==="problemSides"), problem);
+
+      cols.appendChild(building);
+      cols.appendChild(problem);
+      irr.appendChild(cols);
+      controlsCard.appendChild(irr);
+
+      // IAP + Strategy/Command
+      const row = document.createElement("div");
+      row.className = "miniRow";
+
+      const iap = document.createElement("div");
+      iap.className = "block iap";
+      iap.innerHTML = `<h2>Initial Action Plan</h2>`;
+      renderButtonGroup(CONFIG.find(g => g.key==="iapTasks"), iap);
+      renderButtonGroup(CONFIG.find(g => g.key==="iapLocation"), iap);
+      renderButtonGroup(CONFIG.find(g => g.key==="iapObjectives"), iap);
+
+      const cmd = document.createElement("div");
+      cmd.className = "block cmd";
+      cmd.innerHTML = `<h2>Strategy / Command</h2>`;
+
+      const stratLabel = document.createElement("div");
+      stratLabel.style.margin = "0 0 10px 0";
+      stratLabel.innerHTML = `<b>Strategy</b>`;
+      cmd.appendChild(stratLabel);
+
+      const stratGrid = document.createElement("div");
+      stratGrid.className = "grid";
+      ["Offensive","Defensive"].forEach(v => {
+        const btn = document.createElement("button");
+        btn.className = "choice";
+        btn.dataset.key = "strategy";
+        btn.dataset.value = v;
+        btn.textContent = v;
+        btn.addEventListener("click", () => {
+          state.strategy = v;
+          renderScreen();
+          updateOutputs();
+        });
+        stratGrid.appendChild(btn);
+      });
+      cmd.appendChild(stratGrid);
+
+      const cmdLabel = document.createElement("div");
+      cmdLabel.className = "boldLabel";
+      cmdLabel.style.margin = "12px 0 10px 0";
+      cmdLabel.textContent = "Command";
+      cmd.appendChild(cmdLabel);
+
+      const cmdInput = document.createElement("input");
+      cmdInput.type = "text";
+      cmdInput.placeholder = "e.g., Trk 1 is now Main Street Command";
+      cmdInput.value = state.commandText || "";
+      cmdInput.addEventListener("input", (e) => {
+        state.commandText = e.target.value;
         updateOutputs();
       });
-      stratGrid.appendChild(btn);
-    });
-    cmd.appendChild(stratGrid);
+      cmd.appendChild(cmdInput);
 
-    const cmdLabel = document.createElement("div");
-    cmdLabel.className = "boldLabel";
-    cmdLabel.style.margin = "12px 0 10px 0";
-    cmdLabel.textContent = "Command";
-    cmd.appendChild(cmdLabel);
+      row.appendChild(iap);
+      row.appendChild(cmd);
+      controlsCard.appendChild(row);
 
-    const cmdInput = document.createElement("input");
-    cmdInput.type = "text";
-    cmdInput.placeholder = "e.g., Trk 1 is now Main Street Command";
-    cmdInput.value = state.commandText || "";
-    cmdInput.addEventListener("input", (e) => {
-      state.commandText = e.target.value;
-      updateOutputs();
-    });
-    cmd.appendChild(cmdInput);
+      // Generate + nav
+      const genRow = document.createElement("div");
+      genRow.className = "twoBtnRow";
 
-    row.appendChild(iap);
-    row.appendChild(cmd);
-    controlsEl.appendChild(row);
+      const genBtn = document.createElement("button");
+      genBtn.className = "choice";
+      genBtn.textContent = "Generate Size-Up";
+      genBtn.addEventListener("click", () => {
+        sizeupVisible = true;
+        document.getElementById("sizeupCard").style.display = "block";
+        updateOutputs();
+      });
+      genRow.appendChild(genBtn);
 
-    // Follow-up controls
-    const followCard = document.getElementById("followControlsCard");
-    if (followCard) {
-      followCard.innerHTML = "";
-      renderFollowBlock(followCard);
+      const nextBtn2 = document.createElement("button");
+      nextBtn2.className = "choice";
+      nextBtn2.textContent = "Next: Follow-Up";
+      nextBtn2.addEventListener("click", () => goToScreen(3));
+      genRow.appendChild(nextBtn2);
+
+      controlsCard.appendChild(genRow);
+
+      // Show size-up card only if generated
+      if (sizeupVisible){
+        sizeupCard.style.display = "block";
+      }
+
+    } else if (currentScreen === 3){
+      // Screen 3: Follow-up only
+      const followControlsCard = document.getElementById("followControlsCard");
+      followControlsCard.style.display = "block";
+      followOutputCard.style.display = "block";
+
+      followControlsCard.innerHTML = "";
+      renderFollowBlock(followControlsCard);
     }
 
     refreshSelectedUI();
@@ -931,7 +1100,7 @@ function ensurePeriod(s){
 
   function refreshSelectedUI(){
     document.querySelectorAll("button.choice").forEach(btn => {
-      // size-up
+      // size-up buttons
       if (btn.dataset.key) {
         const key = btn.dataset.key;
         const value = btn.dataset.value;
@@ -948,16 +1117,13 @@ function ensurePeriod(s){
         btn.classList.toggle("selected", selected);
       }
 
-      // follow-up
+      // follow-up buttons
       if (btn.dataset.fkey) {
         const k = btn.dataset.fkey;
         const v = btn.dataset.fvalue;
-
-        // follow-up multi groups
         const current = fstate[k];
         const isMulti = Array.isArray(current);
         const selected = isMulti ? current.includes(v) : (current || "") === v;
-
         btn.classList.toggle("selected", selected);
       }
     });
@@ -969,8 +1135,10 @@ function ensurePeriod(s){
     });
   }
 
+  // ---------- Sentence builder ----------
+
   function updateOutputs(){
-    // ---------- SIZE-UP ----------
+    // SIZE-UP
     const battalionCode = (state.battalion || "").trim();
     const battalion = battalionDisplay(battalionCode);
     const apparatus = (state.apparatus || "").trim();
@@ -1034,23 +1202,23 @@ function ensurePeriod(s){
 
     outputBox.textContent = [line1, line2, line3].join("\n\n");
 
-    // ---------- FOLLOW-UP ----------
+    // FOLLOW-UP
     const fBattalion = battalionDisplay(state.battalion);
     const fCommand = normalizeCommandName(state.commandText);
 
     const r360 = (fstate.r360 || "").trim();
-    const r360Findings = (fstate.r360Findings || "").trim();
+    const rawR360Findings = (fstate.r360Findings || "").trim();
+    const r360Findings = rawR360Findings ? ensurePeriod(cleanInlineText(rawR360Findings)) : "";
 
     const safetyMode = (fstate.safetyMode || "").trim();
-    const safetyText = (fstate.safetyText || "").trim();
+    const rawSafetyText = (fstate.safetyText || "").trim();
+    const safetyText = rawSafetyText ? ensurePeriod(cleanInlineText(rawSafetyText)) : "";
 
     const changeIap = (fstate.changeIap || "").trim();
-    const confirmStrat = ((fstate.confirmStrategy || state.strategy || "Offensive") + "")
-      .trim();
+    const confirmStrat = ((fstate.confirmStrategy || state.strategy || "Offensive") + "").trim();
 
     const resource = (fstate.resourceDetermination || "").trim();
 
-    // build new IAP phrase (if change IAP = Yes)
     let newIapLine = "";
     if (changeIap === "Yes") {
       const ntasks = (Array.isArray(fstate.newIapTasks) ? fstate.newIapTasks : [])
@@ -1072,44 +1240,45 @@ function ensurePeriod(s){
 
     const parts = [];
 
-    // Lead-in sentence (Battalion + From Command + 360 + findings)
+    // Lead
     let lead =
       `${fBattalion ? fBattalion + " " : ""}` +
       `${fCommand ? "From " + fCommand + ", " : ""}`;
 
     if (r360) {
-      lead += `360 was ${r360}`;
+      const r360Phrase = (r360 === "Completed")
+        ? "360 completed"
+        : "360 not completed";
+      lead += r360Phrase;
       if (r360Findings) lead += `, ${r360Findings}`;
     }
 
     lead = lead.trim();
-    if (lead) parts.push(lead + (lead.endsWith(".") ? "" : ","));
+    if (lead) parts.push(lead + (/[.!?]$/.test(lead) ? "" : ","));
 
-    // Safety sentence
+    // Safety
     if (safetyMode === "None noted") {
       parts.push("no safety concerns noted,");
     } else if (safetyMode === "Safety concerns") {
-      parts.push(`${safetyText ? safetyText : "Safety concerns noted"},`);
+      parts.push(safetyText || "Safety concerns noted,");
     }
 
-    // Change IAP (only if Yes)
+    // New IAP
     if (newIapLine) parts.push(newIapLine.endsWith(".") ? newIapLine : (newIapLine + "."));
 
-    // Strategy sentence
+    // Strategy
     parts.push(`We are remaining in the ${confirmStrat.toLowerCase()} strategy.`);
 
-    // Resource determination sentence
+    // Resource determination
     if (resource === "Recall units") parts.push("Recall units.");
     if (resource === "2nd alarm") parts.push("Give me a 2nd alarm.");
 
-    // Final output
     const cleaned = parts.join(" ").replace(/\s+/g," ").trim();
-    followOutputBox.textContent = cleaned || "Follow-up report: (make selections above).";
-
+    followOutputBox.textContent = cleaned || "Follow-up report: (make selections on Step 3).";
   }
 
   function init(){
-    renderControls();
+    renderScreen();
     updateOutputs();
   }
 
