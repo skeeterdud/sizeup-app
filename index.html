@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MFD Blue Card Trainer</title>
+  <title>MFD Size Up Trainer</title>
 
   <!-- iPhone / PWA settings -->
   <meta name="theme-color" content="#0b1a3a" />
@@ -180,6 +180,14 @@
       box-shadow:0 10px 22px rgba(37,99,235,.22);
     }
 
+    /* Green primary button for Start IRR, New Size-Up, etc. */
+    button.choice.primaryBtn{
+      background:#16a34a;
+      border-color:#15803d;
+      color:#ffffff;
+      box-shadow:0 10px 22px rgba(22,163,74,.35);
+    }
+
     button.choice.small{
       padding:10px 10px;
       font-size:13px;
@@ -263,7 +271,7 @@
 
 <body>
 <header>
-  <h1>MFD Size-Up Builder</h1>
+  <h1>MFD Size Up Trainer</h1>
   <div class="hint">Step through, tap selections, then copy or print/PDF.</div>
 </header>
 
@@ -283,7 +291,6 @@
   <div class="card" id="followOutputCard" style="display:none">
     <div class="outputTitle"><b>Generated Follow-Up Report</b></div>
     <div class="output" id="followOutputBox"></div>
-    <!-- New Size-Up / Print row will be injected here on Screen 3 -->
   </div>
 </div>
 
@@ -596,6 +603,7 @@
   }
 
   function renderDropdownBlock(parentEl){
+    // (kept around in case we want it later; not used on Screen 1 now)
     const block = document.createElement("div");
     block.className = "block ops";
     block.innerHTML = `<h2>Batt / Apparatus</h2>`;
@@ -864,7 +872,7 @@
     });
     block.appendChild(r2Grid);
 
-    // Nav row: Back to IRR/IAP (so you can go back and forth)
+    // Nav row: Back to IRR/IAP
     const navRow = document.createElement("div");
     navRow.className = "twoBtnRow";
 
@@ -895,21 +903,72 @@
     followOutputCard.style.display = "none";
 
     if (currentScreen === 1){
-      // Screen 1: Apparatus
+      // Screen 1: TWO boxes – Select your Battalion / Select your Apparatus
       controlsCard.style.display = "block";
       controlsCard.innerHTML = "";
 
       const title = document.createElement("div");
       title.className = "outputTitle";
-      title.innerHTML = "<b>Pick your apparatus</b>";
+      title.innerHTML = "<b>Start a new size-up</b>";
       controlsCard.appendChild(title);
 
       const step = document.createElement("div");
       step.className = "stepLabel";
-      step.textContent = "Step 1 of 3 – Battalion & Apparatus";
+      step.textContent = "Step 1 of 3 – Select your Battalion & Apparatus";
       controlsCard.appendChild(step);
 
-      renderDropdownBlock(controlsCard);
+      const row = document.createElement("div");
+      row.className = "twoCol";
+
+      // Battalion box
+      const battBlock = document.createElement("div");
+      battBlock.className = "block ops";
+      battBlock.innerHTML = "<h2>Select your Battalion</h2>";
+
+      const battLabel = document.createElement("label");
+      battLabel.textContent = "Battalion";
+      battBlock.appendChild(battLabel);
+
+      const battSel = document.createElement("select");
+      BATTALIONS.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v || "Select Battalion…";
+        battSel.appendChild(opt);
+      });
+      battSel.value = state.battalion || "";
+      battSel.addEventListener("change", (e) => {
+        state.battalion = e.target.value;
+        updateOutputs();
+      });
+      battBlock.appendChild(battSel);
+
+      // Apparatus box
+      const appBlock = document.createElement("div");
+      appBlock.className = "block ops";
+      appBlock.innerHTML = "<h2>Select your Apparatus</h2>";
+
+      const appLabel = document.createElement("label");
+      appLabel.textContent = "Apparatus";
+      appBlock.appendChild(appLabel);
+
+      const appSel = document.createElement("select");
+      APPARATUS.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v || "Select Apparatus…";
+        appSel.appendChild(opt);
+      });
+      appSel.value = state.apparatus || "";
+      appSel.addEventListener("change", (e) => {
+        state.apparatus = e.target.value;
+        updateOutputs();
+      });
+      appBlock.appendChild(appSel);
+
+      row.appendChild(battBlock);
+      row.appendChild(appBlock);
+      controlsCard.appendChild(row);
 
       const nav = document.createElement("div");
       nav.className = "twoBtnRow";
@@ -921,8 +980,8 @@
       nav.appendChild(spacer);
 
       const nextBtn = document.createElement("button");
-      nextBtn.className = "choice";
-      nextBtn.textContent = "Next: IRR / IAP";
+      nextBtn.className = "choice primaryBtn";
+      nextBtn.textContent = "Start IRR";
       nextBtn.addEventListener("click", () => goToScreen(2));
       nav.appendChild(nextBtn);
 
@@ -1036,7 +1095,7 @@
       navRow.appendChild(backBtn);
 
       const nextBtn2 = document.createElement("button");
-      nextBtn2.className = "choice";
+      nextBtn2.className = "choice primaryBtn";
       nextBtn2.textContent = "Next: Follow-Up";
       nextBtn2.addEventListener("click", () => goToScreen(3));
       navRow.appendChild(nextBtn2);
@@ -1063,7 +1122,7 @@
       btnRow.className = "twoBtnRow";
 
       const newBtn = document.createElement("button");
-      newBtn.className = "choice";
+      newBtn.className = "choice primaryBtn";
       newBtn.textContent = "New Size-Up";
       newBtn.addEventListener("click", clearAll);
       btnRow.appendChild(newBtn);
