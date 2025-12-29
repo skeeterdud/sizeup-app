@@ -258,29 +258,20 @@
       color:rgba(233,238,252,.8);
       margin-bottom:6px;
     }
-
-    .smallNote{
-      font-size:12px;
-      color:rgba(233,238,252,.75);
-      margin-top:4px;
-    }
   </style>
 </head>
 
 <body>
 <header>
   <h1>MFD Size-Up Builder</h1>
-  <div class="hint">Tap selections → Generate → Copy or Print/PDF.</div>
+  <div class="hint">Step through, tap selections, then copy or print/PDF.</div>
 </header>
 
 <div class="wrap">
-  <!-- Global actions (New / Print) -->
-  <div class="card" id="globalActionsCard"></div>
-
-  <!-- Screen content card (screen 1 and 2 use this) -->
+  <!-- Screen content -->
   <div class="card" id="controlsCard"></div>
 
-  <!-- Size-Up output (shown when generated on Screen 2) -->
+  <!-- Size-Up output (Screen 2) -->
   <div class="card" id="sizeupCard" style="display:none">
     <div class="outputTitle"><b>Generated Size-Up</b></div>
     <div class="output" id="outputBox"></div>
@@ -292,6 +283,7 @@
   <div class="card" id="followOutputCard" style="display:none">
     <div class="outputTitle"><b>Generated Follow-Up Report</b></div>
     <div class="output" id="followOutputBox"></div>
+    <!-- New Size-Up / Print row will be injected here on Screen 3 -->
   </div>
 </div>
 
@@ -367,7 +359,6 @@
     ]}
   ];
 
-  // Problem location quick buttons (small)
   const PROBLEM_QUICK = [
     "1st Floor","2nd Floor","3rd Floor","Corner","Roof","Roof Line","Backyard","Garage","Other"
   ];
@@ -381,10 +372,13 @@
   // ---------- State ----------
   const state = {};
   const fstate = {};
-  let currentScreen = 1;      // 1 = apparatus, 2 = IRR/IAP, 3 = follow-up
-  let sizeupVisible = false;  // controls visibility of sizeupCard
+  let currentScreen = 1;   // 1 = apparatus, 2 = IRR/IAP, 3 = follow-up
 
   const controlsCard = document.getElementById("controlsCard");
+  const sizeupCard = document.getElementById("sizeupCard");
+  const followControlsCard = document.getElementById("followControlsCard");
+  const followOutputCard = document.getElementById("followOutputCard");
+
   const outputBox = document.getElementById("outputBox");
   const followOutputBox = document.getElementById("followOutputBox");
 
@@ -397,7 +391,6 @@
   function clearAll(){
     for (const k in state) delete state[k];
     for (const k in fstate) delete fstate[k];
-    sizeupVisible = false;
     currentScreen = 1;
     renderScreen();
     updateOutputs();
@@ -479,8 +472,8 @@
 
   function cleanInlineText(raw){
     let s = (raw || "").trim();
-    s = s.replace(/^[,.;:\-\s]+/, "").trim();  // leading punctuation
-    s = s.replace(/\s+/g, " ");                // collapse spaces
+    s = s.replace(/^[,.;:\-\s]+/, "").trim();
+    s = s.replace(/\s+/g, " ");
     if (s.length) s = s.charAt(0).toUpperCase() + s.slice(1);
     return s;
   }
@@ -726,6 +719,11 @@
     block.className = "block follow";
     block.innerHTML = `<h2>Follow Up Report</h2>`;
 
+    const step = document.createElement("div");
+    step.className = "stepLabel";
+    step.textContent = "Step 3 of 3 – Follow-Up Report";
+    block.appendChild(step);
+
     // 360 Completed / Not completed
     const rTitle = document.createElement("div");
     rTitle.style.margin = "12px 0 10px 0";
@@ -866,7 +864,7 @@
     });
     block.appendChild(r2Grid);
 
-    // Nav row: Back to IRR/IAP
+    // Nav row: Back to IRR/IAP (so you can go back and forth)
     const navRow = document.createElement("div");
     navRow.className = "twoBtnRow";
 
@@ -889,56 +887,15 @@
 
   // ---------- Screen rendering ----------
 
-  function renderGlobalActions(){
-    const card = document.getElementById("globalActionsCard");
-    card.innerHTML = "";
-
-    const step = document.createElement("div");
-    step.className = "stepLabel";
-    step.textContent =
-      currentScreen === 1 ? "Step 1 of 3 – Pick your apparatus" :
-      currentScreen === 2 ? "Step 2 of 3 – IRR & Initial Action Plan" :
-                            "Step 3 of 3 – Follow-Up Report";
-    card.appendChild(step);
-
-    const row = document.createElement("div");
-    row.className = "twoBtnRow";
-
-    const newBtn = document.createElement("button");
-    newBtn.className = "choice";
-    newBtn.textContent = "New Size-Up";
-    newBtn.addEventListener("click", clearAll);
-    row.appendChild(newBtn);
-
-    const printBtn = document.createElement("button");
-    printBtn.className = "choice";
-    printBtn.textContent = "Print / PDF";
-    printBtn.addEventListener("click", () => window.print());
-    row.appendChild(printBtn);
-
-    card.appendChild(row);
-
-    const note = document.createElement("div");
-    note.className = "smallNote";
-    note.textContent = "Use New Size-Up to reset all fields. Use Print / PDF to send this to a printer or save as PDF.";
-    card.appendChild(note);
-  }
-
   function renderScreen(){
-    renderGlobalActions();
-
-    const sizeupCard = document.getElementById("sizeupCard");
-    const followControlsCard = document.getElementById("followControlsCard");
-    const followOutputCard = document.getElementById("followOutputCard");
-
-    // Reset visibility; we'll turn on what we need
+    // Hide everything, then show what we need
     controlsCard.style.display = "none";
     sizeupCard.style.display = "none";
     followControlsCard.style.display = "none";
     followOutputCard.style.display = "none";
 
     if (currentScreen === 1){
-      // Screen 1: Apparatus only
+      // Screen 1: Apparatus
       controlsCard.style.display = "block";
       controlsCard.innerHTML = "";
 
@@ -946,6 +903,11 @@
       title.className = "outputTitle";
       title.innerHTML = "<b>Pick your apparatus</b>";
       controlsCard.appendChild(title);
+
+      const step = document.createElement("div");
+      step.className = "stepLabel";
+      step.textContent = "Step 1 of 3 – Battalion & Apparatus";
+      controlsCard.appendChild(step);
 
       renderDropdownBlock(controlsCard);
 
@@ -967,7 +929,7 @@
       controlsCard.appendChild(nav);
 
     } else if (currentScreen === 2){
-      // Screen 2: IRR + IAP/Strategy/Command
+      // Screen 2: IRR + IAP/Strategy/Command + live size-up
       controlsCard.style.display = "block";
       controlsCard.innerHTML = "";
 
@@ -975,6 +937,11 @@
       title.className = "outputTitle";
       title.innerHTML = "<b>IRR & Initial Action Plan</b>";
       controlsCard.appendChild(title);
+
+      const step = document.createElement("div");
+      step.className = "stepLabel";
+      step.textContent = "Step 2 of 3 – IRR & IAP";
+      controlsCard.appendChild(step);
 
       // IRR
       const irr = document.createElement("div");
@@ -1058,41 +1025,56 @@
       row.appendChild(cmd);
       controlsCard.appendChild(row);
 
-      // Generate + nav
-      const genRow = document.createElement("div");
-      genRow.className = "twoBtnRow";
+      // Nav row: Back to Apparatus, Next to Follow-Up
+      const navRow = document.createElement("div");
+      navRow.className = "twoBtnRow";
 
-      const genBtn = document.createElement("button");
-      genBtn.className = "choice";
-      genBtn.textContent = "Generate Size-Up";
-      genBtn.addEventListener("click", () => {
-        sizeupVisible = true;
-        document.getElementById("sizeupCard").style.display = "block";
-        updateOutputs();
-      });
-      genRow.appendChild(genBtn);
+      const backBtn = document.createElement("button");
+      backBtn.className = "choice";
+      backBtn.textContent = "Back: Battalion / Apparatus";
+      backBtn.addEventListener("click", () => goToScreen(1));
+      navRow.appendChild(backBtn);
 
       const nextBtn2 = document.createElement("button");
       nextBtn2.className = "choice";
       nextBtn2.textContent = "Next: Follow-Up";
       nextBtn2.addEventListener("click", () => goToScreen(3));
-      genRow.appendChild(nextBtn2);
+      navRow.appendChild(nextBtn2);
 
-      controlsCard.appendChild(genRow);
+      controlsCard.appendChild(navRow);
 
-      // Show size-up card only if generated
-      if (sizeupVisible){
-        sizeupCard.style.display = "block";
-      }
+      // Show live Size-Up under this screen
+      sizeupCard.style.display = "block";
 
     } else if (currentScreen === 3){
       // Screen 3: Follow-up only
-      const followControlsCard = document.getElementById("followControlsCard");
       followControlsCard.style.display = "block";
       followOutputCard.style.display = "block";
 
       followControlsCard.innerHTML = "";
       renderFollowBlock(followControlsCard);
+
+      // Add New Size-Up / Print at bottom of followOutputCard
+      followOutputCard.innerHTML = `
+        <div class="outputTitle"><b>Generated Follow-Up Report</b></div>
+        <div class="output" id="followOutputBox"></div>
+      `;
+      const btnRow = document.createElement("div");
+      btnRow.className = "twoBtnRow";
+
+      const newBtn = document.createElement("button");
+      newBtn.className = "choice";
+      newBtn.textContent = "New Size-Up";
+      newBtn.addEventListener("click", clearAll);
+      btnRow.appendChild(newBtn);
+
+      const printBtn = document.createElement("button");
+      printBtn.className = "choice";
+      printBtn.textContent = "Print / PDF";
+      printBtn.addEventListener("click", () => window.print());
+      btnRow.appendChild(printBtn);
+
+      followOutputCard.appendChild(btnRow);
     }
 
     refreshSelectedUI();
