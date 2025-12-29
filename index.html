@@ -69,6 +69,8 @@
       padding:12px;
       position:relative;
       z-index:1;
+      max-width: 960px;       /* ~8.5x11 feel on screen */
+      margin:12px auto;
     }
 
     .card{
@@ -83,6 +85,7 @@
       padding:12px;
       border:1px solid rgba(0,0,0,.10);
       color:var(--text);
+      margin-bottom:12px;
     }
     .block h2{
       margin:0 0 10px 0;
@@ -105,6 +108,7 @@
       border:1px solid rgba(0,0,0,.10);
       background: rgba(255,255,255,.10);
       color:var(--text);
+      margin-bottom:12px;
     }
     .irrTitle{
       margin:0 0 10px 0;
@@ -180,7 +184,6 @@
       box-shadow:0 10px 22px rgba(37,99,235,.22);
     }
 
-    /* Green primary button for Start IRR, New Size-Up, etc. */
     button.choice.primaryBtn{
       background:#16a34a;
       border-color:#15803d;
@@ -283,6 +286,7 @@
   <div class="card" id="sizeupCard" style="display:none">
     <div class="outputTitle"><b>Generated Size-Up</b></div>
     <div class="output" id="outputBox"></div>
+    <div id="sizeupNavRow"></div>
   </div>
 
   <!-- Follow-up controls + output (Screen 3) -->
@@ -383,6 +387,7 @@
 
   const controlsCard = document.getElementById("controlsCard");
   const sizeupCard = document.getElementById("sizeupCard");
+  const sizeupNavRow = document.getElementById("sizeupNavRow");
   const followControlsCard = document.getElementById("followControlsCard");
   const followOutputCard = document.getElementById("followOutputCard");
 
@@ -600,60 +605,6 @@
     }
 
     parentEl.appendChild(wrap);
-  }
-
-  function renderDropdownBlock(parentEl){
-    // (kept around in case we want it later; not used on Screen 1 now)
-    const block = document.createElement("div");
-    block.className = "block ops";
-    block.innerHTML = `<h2>Batt / Apparatus</h2>`;
-
-    const row = document.createElement("div");
-    row.className = "selectRow";
-
-    const battWrap = document.createElement("div");
-    const battLabel = document.createElement("label");
-    battLabel.textContent = "Battalion";
-    battWrap.appendChild(battLabel);
-
-    const battSel = document.createElement("select");
-    BATTALIONS.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v || "Select Battalion…";
-      battSel.appendChild(opt);
-    });
-    battSel.value = state.battalion || "";
-    battSel.addEventListener("change", (e) => {
-      state.battalion = e.target.value;
-      updateOutputs();
-    });
-    battWrap.appendChild(battSel);
-
-    const appWrap = document.createElement("div");
-    const appLabel = document.createElement("label");
-    appLabel.textContent = "Apparatus";
-    appWrap.appendChild(appLabel);
-
-    const appSel = document.createElement("select");
-    APPARATUS.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v || "Select Apparatus…";
-      appSel.appendChild(opt);
-    });
-    appSel.value = state.apparatus || "";
-    appSel.addEventListener("change", (e) => {
-      state.apparatus = e.target.value;
-      updateOutputs();
-    });
-    appWrap.appendChild(appSel);
-
-    row.appendChild(battWrap);
-    row.appendChild(appWrap);
-
-    block.appendChild(row);
-    parentEl.appendChild(block);
   }
 
   // ------- Follow-up rendering helpers -------
@@ -901,6 +852,7 @@
     sizeupCard.style.display = "none";
     followControlsCard.style.display = "none";
     followOutputCard.style.display = "none";
+    sizeupNavRow.innerHTML = "";
 
     if (currentScreen === 1){
       // Screen 1: TWO boxes – Select your Battalion / Select your Apparatus
@@ -988,7 +940,7 @@
       controlsCard.appendChild(nav);
 
     } else if (currentScreen === 2){
-      // Screen 2: IRR + IAP/Strategy/Command + live size-up
+      // Screen 2: stacked IRR & IAP / Strategy / Command + live size-up
       controlsCard.style.display = "block";
       controlsCard.innerHTML = "";
 
@@ -1002,42 +954,40 @@
       step.textContent = "Step 2 of 3 – IRR & IAP";
       controlsCard.appendChild(step);
 
-      // IRR
+      // IRR wrapper
       const irr = document.createElement("div");
       irr.className = "irrWrap";
       irr.innerHTML = `<div class="irrTitle">IRR</div>`;
-      const cols = document.createElement("div");
-      cols.className = "twoCol";
 
+      // Building (stacked)
       const building = document.createElement("div");
       building.className = "block building";
       building.innerHTML = `<h2>Building Description</h2>`;
       renderButtonGroup(CONFIG.find(g => g.key==="buildingSize"), building);
       renderButtonGroup(CONFIG.find(g => g.key==="height"), building);
       renderButtonGroup(CONFIG.find(g => g.key==="occupancy"), building);
+      irr.appendChild(building);
 
+      // Problem (stacked)
       const problem = document.createElement("div");
       problem.className = "block problem";
       problem.innerHTML = `<h2>Problem Description</h2>`;
       renderButtonGroup(CONFIG.find(g => g.key==="conditions"), problem);
       renderButtonGroup(CONFIG.find(g => g.key==="problemSides"), problem);
+      irr.appendChild(problem);
 
-      cols.appendChild(building);
-      cols.appendChild(problem);
-      irr.appendChild(cols);
       controlsCard.appendChild(irr);
 
-      // IAP + Strategy/Command
-      const row = document.createElement("div");
-      row.className = "miniRow";
-
+      // Initial Action Plan (stacked)
       const iap = document.createElement("div");
       iap.className = "block iap";
       iap.innerHTML = `<h2>Initial Action Plan</h2>`;
       renderButtonGroup(CONFIG.find(g => g.key==="iapTasks"), iap);
       renderButtonGroup(CONFIG.find(g => g.key==="iapLocation"), iap);
       renderButtonGroup(CONFIG.find(g => g.key==="iapObjectives"), iap);
+      controlsCard.appendChild(iap);
 
+      // Strategy / Command (stacked)
       const cmd = document.createElement("div");
       cmd.className = "block cmd";
       cmd.innerHTML = `<h2>Strategy / Command</h2>`;
@@ -1080,30 +1030,29 @@
       });
       cmd.appendChild(cmdInput);
 
-      row.appendChild(iap);
-      row.appendChild(cmd);
-      controlsCard.appendChild(row);
-
-      // Nav row: Back to Apparatus, Next to Follow-Up
-      const navRow = document.createElement("div");
-      navRow.className = "twoBtnRow";
-
-      const backBtn = document.createElement("button");
-      backBtn.className = "choice";
-      backBtn.textContent = "Back: Battalion / Apparatus";
-      backBtn.addEventListener("click", () => goToScreen(1));
-      navRow.appendChild(backBtn);
-
-      const nextBtn2 = document.createElement("button");
-      nextBtn2.className = "choice primaryBtn";
-      nextBtn2.textContent = "Next: Follow-Up";
-      nextBtn2.addEventListener("click", () => goToScreen(3));
-      navRow.appendChild(nextBtn2);
-
-      controlsCard.appendChild(navRow);
+      controlsCard.appendChild(cmd);
 
       // Show live Size-Up under this screen
       sizeupCard.style.display = "block";
+
+      // Buttons under Generated Size-Up
+      sizeupNavRow.innerHTML = "";
+      const navRow = document.createElement("div");
+      navRow.className = "twoBtnRow";
+
+      const startOverBtn = document.createElement("button");
+      startOverBtn.className = "choice";
+      startOverBtn.textContent = "Start Over";
+      startOverBtn.addEventListener("click", () => goToScreen(1));
+      navRow.appendChild(startOverBtn);
+
+      const followUpBtn = document.createElement("button");
+      followUpBtn.className = "choice primaryBtn";
+      followUpBtn.textContent = "Follow Up";
+      followUpBtn.addEventListener("click", () => goToScreen(3));
+      navRow.appendChild(followUpBtn);
+
+      sizeupNavRow.appendChild(navRow);
 
     } else if (currentScreen === 3){
       // Screen 3: Follow-up only
