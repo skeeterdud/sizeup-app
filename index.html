@@ -264,10 +264,55 @@
       margin-top:12px;
     }
 
+    .threeBtnRow{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px;
+      margin-top:12px;
+    }
+
     .stepLabel{
       font-size:13px;
       color:rgba(233,238,252,.8);
       margin-bottom:6px;
+    }
+
+    .no-print{
+      /* hidden only in print view */
+    }
+
+    @media print {
+      body{
+        background:#ffffff;
+        color:#000000;
+      }
+      body::before{
+        display:none;
+      }
+      header{
+        display:none;
+      }
+      .wrap{
+        max-width:100%;
+        margin:0;
+        padding:0;
+      }
+      .card{
+        background:#ffffff;
+        border-color:#000000;
+        box-shadow:none;
+        page-break-inside:avoid;
+        margin:0 0 8px 0;
+      }
+      #controlsCard,
+      #sizeupCard,
+      #followControlsCard,
+      #followOutputCard{
+        display:block !important;
+      }
+      .no-print{
+        display:none !important;
+      }
     }
   </style>
 </head>
@@ -286,7 +331,7 @@
   <div class="card" id="sizeupCard" style="display:none">
     <div class="outputTitle"><b>Generated Size-Up</b></div>
     <div class="output" id="outputBox"></div>
-    <div id="sizeupNavRow"></div>
+    <div id="sizeupNavRow" class="no-print"></div>
   </div>
 
   <!-- Follow-up controls + output (Screen 3) -->
@@ -295,6 +340,7 @@
   <div class="card" id="followOutputCard" style="display:none">
     <div class="outputTitle"><b>Generated Follow-Up Report</b></div>
     <div class="output" id="followOutputBox"></div>
+    <div id="followBottomRow" class="no-print"></div>
   </div>
 </div>
 
@@ -367,6 +413,7 @@
     { key:"resourceDetermination", title:"Resource Determination", mode:"single", options:[
       { value:"Recall units", label:"Recall units", phrase:"Recall units" },
       { value:"2nd alarm", label:"2nd alarm", phrase:"2nd alarm" }
+      // "Keep Current Assignment" will be added in follow-up block only
     ]}
   ];
 
@@ -390,6 +437,7 @@
   const sizeupNavRow = document.getElementById("sizeupNavRow");
   const followControlsCard = document.getElementById("followControlsCard");
   const followOutputCard = document.getElementById("followOutputCard");
+  const followBottomRow = document.getElementById("followBottomRow");
 
   const outputBox = document.getElementById("outputBox");
   const followOutputBox = document.getElementById("followOutputBox");
@@ -557,16 +605,16 @@
 
       PROBLEM_QUICK.forEach(label => {
         const btn = document.createElement("button");
-        btn.className = "choice small";
-        btn.textContent = label;
-        btn.addEventListener("click", () => {
-          const current = Array.isArray(state.problemLocQuick) ? state.problemLocQuick : [];
-          state.problemLocQuick = current.includes(label)
-            ? current.filter(v => v !== label)
-            : [...current, label];
-          renderScreen();
-          updateOutputs();
-        });
+          btn.className = "choice small";
+          btn.textContent = label;
+          btn.addEventListener("click", () => {
+            const current = Array.isArray(state.problemLocQuick) ? state.problemLocQuick : [];
+            state.problemLocQuick = current.includes(label)
+              ? current.filter(v => v !== label)
+              : [...current, label];
+            renderScreen();
+            updateOutputs();
+          });
         qGrid.appendChild(btn);
       });
 
@@ -795,13 +843,14 @@
       btn.textContent = v;
       btn.addEventListener("click", () => {
         fstate.confirmStrategy = v;
+        renderScreen();       // 🔹 ensure button highlights
         updateOutputs();
       });
       cGrid.appendChild(btn);
     });
     block.appendChild(cGrid);
 
-    // Resource determination
+    // Resource determination with 3rd button "Keep Current Assignment"
     const r2Title = document.createElement("div");
     r2Title.style.margin = "12px 0 10px 0";
     r2Title.innerHTML = `<b>Resource determination</b>`;
@@ -809,7 +858,7 @@
 
     const r2Grid = document.createElement("div");
     r2Grid.className = "grid";
-    ["Recall units","2nd alarm"].forEach(v => {
+    ["Recall units","2nd alarm","Keep Current Assignment"].forEach(v => {
       const btn = document.createElement("button");
       btn.className = "choice";
       btn.dataset.fkey = "resourceDetermination";
@@ -817,29 +866,12 @@
       btn.textContent = v;
       btn.addEventListener("click", () => {
         fstate.resourceDetermination = v;
+        renderScreen();
         updateOutputs();
       });
       r2Grid.appendChild(btn);
     });
     block.appendChild(r2Grid);
-
-    // Nav row: Back to IRR/IAP
-    const navRow = document.createElement("div");
-    navRow.className = "twoBtnRow";
-
-    const backBtn = document.createElement("button");
-    backBtn.className = "choice";
-    backBtn.textContent = "Back: IRR / IAP";
-    backBtn.addEventListener("click", () => goToScreen(2));
-    navRow.appendChild(backBtn);
-
-    const spacer = document.createElement("button");
-    spacer.className = "choice";
-    spacer.textContent = " ";
-    spacer.style.visibility = "hidden";
-    navRow.appendChild(spacer);
-
-    block.appendChild(navRow);
 
     parentEl.appendChild(block);
   }
@@ -853,6 +885,7 @@
     followControlsCard.style.display = "none";
     followOutputCard.style.display = "none";
     sizeupNavRow.innerHTML = "";
+    followBottomRow.innerHTML = "";
 
     if (currentScreen === 1){
       // Screen 1: TWO boxes – Select your Battalion / Select your Apparatus
@@ -923,7 +956,7 @@
       controlsCard.appendChild(row);
 
       const nav = document.createElement("div");
-      nav.className = "twoBtnRow";
+      nav.className = "twoBtnRow no-print";
 
       const spacer = document.createElement("button");
       spacer.className = "choice";
@@ -959,7 +992,7 @@
       irr.className = "irrWrap";
       irr.innerHTML = `<div class="irrTitle">IRR</div>`;
 
-      // Building (stacked)
+      // Building
       const building = document.createElement("div");
       building.className = "block building";
       building.innerHTML = `<h2>Building Description</h2>`;
@@ -968,7 +1001,7 @@
       renderButtonGroup(CONFIG.find(g => g.key==="occupancy"), building);
       irr.appendChild(building);
 
-      // Problem (stacked)
+      // Problem
       const problem = document.createElement("div");
       problem.className = "block problem";
       problem.innerHTML = `<h2>Problem Description</h2>`;
@@ -978,7 +1011,7 @@
 
       controlsCard.appendChild(irr);
 
-      // Initial Action Plan (stacked)
+      // Initial Action Plan
       const iap = document.createElement("div");
       iap.className = "block iap";
       iap.innerHTML = `<h2>Initial Action Plan</h2>`;
@@ -987,7 +1020,7 @@
       renderButtonGroup(CONFIG.find(g => g.key==="iapObjectives"), iap);
       controlsCard.appendChild(iap);
 
-      // Strategy / Command (stacked)
+      // Strategy / Command
       const cmd = document.createElement("div");
       cmd.className = "block cmd";
       cmd.innerHTML = `<h2>Strategy / Command</h2>`;
@@ -1062,19 +1095,16 @@
       followControlsCard.innerHTML = "";
       renderFollowBlock(followControlsCard);
 
-      // Add New Size-Up / Print at bottom of followOutputCard
-      followOutputCard.innerHTML = `
-        <div class="outputTitle"><b>Generated Follow-Up Report</b></div>
-        <div class="output" id="followOutputBox"></div>
-      `;
+      // Bottom: Back IRR, Print/PDF, New Size Up
+      followBottomRow.innerHTML = "";
       const btnRow = document.createElement("div");
-      btnRow.className = "twoBtnRow";
+      btnRow.className = "threeBtnRow";
 
-      const newBtn = document.createElement("button");
-      newBtn.className = "choice primaryBtn";
-      newBtn.textContent = "New Size-Up";
-      newBtn.addEventListener("click", clearAll);
-      btnRow.appendChild(newBtn);
+      const backBtn = document.createElement("button");
+      backBtn.className = "choice";
+      backBtn.textContent = "Back: IRR";
+      backBtn.addEventListener("click", () => goToScreen(2));
+      btnRow.appendChild(backBtn);
 
       const printBtn = document.createElement("button");
       printBtn.className = "choice";
@@ -1082,7 +1112,13 @@
       printBtn.addEventListener("click", () => window.print());
       btnRow.appendChild(printBtn);
 
-      followOutputCard.appendChild(btnRow);
+      const newBtn = document.createElement("button");
+      newBtn.className = "choice primaryBtn";
+      newBtn.textContent = "New Size Up";
+      newBtn.addEventListener("click", clearAll);
+      btnRow.appendChild(newBtn);
+
+      followBottomRow.appendChild(btnRow);
     }
 
     refreshSelectedUI();
@@ -1262,6 +1298,7 @@
     // Resource determination
     if (resource === "Recall units") parts.push("Recall units.");
     if (resource === "2nd alarm") parts.push("Give me a 2nd alarm.");
+    // "Keep Current Assignment" intentionally does not add any text
 
     const cleaned = parts.join(" ").replace(/\s+/g," ").trim();
     followOutputBox.textContent = cleaned || "Follow-up report: (make selections on Step 3).";
